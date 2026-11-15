@@ -32,6 +32,8 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 .dt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f5d98a;font-size:24px;text-align:center;pointer-events:none;text-shadow:0 2px 8px #000;transition:opacity .6s}
 .dt .ar{font-size:38px}#door.go .l{transform:translateX(-101%)}#door.go .r{transform:translateX(101%)}#door.go .dt{opacity:0}
 .photo{position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,.2),rgba(0,0,0,.35)),url(makkah.jpg) center/cover no-repeat}
+.chip{display:inline-block;background:var(--pr);color:var(--pt);border-radius:14px;padding:2px 10px;margin:2px 4px 2px 0;font-size:14px}
+.sel{display:grid;grid-template-columns:118px 1fr;gap:10px;align-items:start}.jl{max-height:440px;overflow-y:auto;padding-right:4px}.jl button{width:100%;text-align:left;margin:2px 0}
 </style></head><body><svg class="bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
 <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050f24"/><stop offset=".6" stop-color="#0c3d44"/><stop offset="1" stop-color="#d9a441"/></linearGradient>
 <radialGradient id="gl"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
@@ -58,7 +60,8 @@ const SUPABASE_ANON_KEY='sb_publishable_S4_PqS_OcyZkkOOvwJ7_fg_Zbip-_Qo';
 const SN=`Al-Fatihah,Al-Baqarah,Ali Imran,An-Nisa,Al-Ma'idah,Al-An'am,Al-A'raf,Al-Anfal,At-Tawbah,Yunus,Hud,Yusuf,Ar-Ra'd,Ibrahim,Al-Hijr,An-Nahl,Al-Isra,Al-Kahf,Maryam,Ta-Ha,Al-Anbiya,Al-Hajj,Al-Mu'minun,An-Nur,Al-Furqan,Ash-Shu'ara,An-Naml,Al-Qasas,Al-'Ankabut,Ar-Rum,Luqman,As-Sajdah,Al-Ahzab,Saba,Fatir,Ya-Sin,As-Saffat,Sad,Az-Zumar,Ghafir,Fussilat,Ash-Shura,Az-Zukhruf,Ad-Dukhan,Al-Jathiyah,Al-Ahqaf,Muhammad,Al-Fath,Al-Hujurat,Qaf,Adh-Dhariyat,At-Tur,An-Najm,Al-Qamar,Ar-Rahman,Al-Waqi'ah,Al-Hadid,Al-Mujadila,Al-Hashr,Al-Mumtahanah,As-Saff,Al-Jumu'ah,Al-Munafiqun,At-Taghabun,At-Talaq,At-Tahrim,Al-Mulk,Al-Qalam,Al-Haqqah,Al-Ma'arij,Nuh,Al-Jinn,Al-Muzzammil,Al-Muddaththir,Al-Qiyamah,Al-Insan,Al-Mursalat,An-Naba,An-Nazi'at,'Abasa,At-Takwir,Al-Infitar,Al-Mutaffifin,Al-Inshiqaq,Al-Buruj,At-Tariq,Al-A'la,Al-Ghashiyah,Al-Fajr,Al-Balad,Ash-Shams,Al-Layl,Ad-Duha,Ash-Sharh,At-Tin,Al-'Alaq,Al-Qadr,Al-Bayyinah,Az-Zalzalah,Al-'Adiyat,Al-Qari'ah,At-Takathur,Al-'Asr,Al-Humazah,Al-Fil,Quraysh,Al-Ma'un,Al-Kawthar,Al-Kafirun,An-Nasr,Al-Masad,Al-Ikhlas,Al-Falaq,An-Nas`.split(',');
 const JR=[[1,2],[2,2],[2,3],[3,4],[4,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,11],[11,12],[12,14],[15,16],[17,18],[18,20],[21,22],[23,25],[25,27],[27,29],[29,33],[33,36],[36,39],[39,41],[41,45],[46,51],[51,57],[58,66],[67,77],[78,114]];
 const surahsOf=j=>{const[a,b]=JR[j-1];return Array.from({length:b-a+1},(_,i)=>a+i)};
-const openJ=new Set();
+let selJ=1;
+const chips=pt=>{const b={};pt.forEach(x=>(b[x.juz]=b[x.juz]||[]).push(x.surah));return Object.keys(b).sort((a,c)=>a-c).map(j=>`<p style="margin:8px 0"><b>Juz ${j}</b><br>${b[j].sort((a,c)=>a-c).map(n=>`<span class="chip">Surah ${n} · ${SN[n-1]}</span>`).join('')}</p>`).join('')};
 async function allRows(t){let o=[],i=0;for(;;){const{data}=await sb.from(t).select('*').range(i,i+999);o=o.concat(data||[]);if(!data||data.length<1000)return o;i+=1000}}
 const DOM='@niumath.app',$=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -111,7 +114,7 @@ async function loadStudent(){
 function studentView(){
   const head=`<div class="top"><h1>Salaam, ${esc(me.name)}</h1><button class="g" onclick="logout()">Sign out</button></div>`;
   if(S.waiting)return view(head+`<div class="card"><h2>Waiting for approval</h2><p>Registration received. The Niumath admin must approve this device and assign your juz. Once done, tap the button below.</p><button onclick="boot()">Check again</button></div>`);
-  view(head+`<div class="card"><b>My allocation</b>${(()=>{const b={};S.pt.forEach(x=>(b[x.juz]=b[x.juz]||[]).push(x.surah));return Object.keys(b).sort((a,c)=>a-c).map(j=>`<p style="margin:6px 0"><b>Juz ${j}:</b> ${b[j].sort((a,c)=>a-c).map(n=>SN[n-1]).join(', ')}</p>`).join('')||'<p class="mu">Nothing allocated yet.</p>'})()}</div>`+(S.lessons.map(l=>`<div class="card"><span class="mu">Juz ${l.juz}${l.surah?' · '+SN[l.surah-1]:''}</span><h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open lesson link ↗</a></p>`:''}</div>`).join('')||'<div class="card mu">No lessons assigned yet.</div>'));
+  view(head+`<div class="card"><b>My allocation</b>${chips(S.pt)||'<p class="mu">Nothing allocated yet.</p>'}</div>`+(S.lessons.map(l=>`<div class="card"><span class="mu">Juz ${l.juz}${l.surah?' · '+SN[l.surah-1]:''}</span><h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open lesson link ↗</a></p>`:''}</div>`).join('')||'<div class="card mu">No lessons assigned yet.</div>'));
 }
 /* ---------- admin ---------- */
 async function loadAdmin(){
@@ -134,13 +137,15 @@ function studentsTab(){
 }
 function assign(s){
   const mine=D.pt.filter(x=>x.student_id===s.id),ml=D.sl.filter(x=>x.student_id===s.id).map(x=>x.lesson_id);
-  return `<h2 style="margin-top:12px">Allocate juz &amp; surahs</h2><p class="mu">Open a juz and tick the surahs for this student. "All" ticks the whole juz.</p>
-  <button class="g" onclick="allJ('${s.id}',true)">All 30 juz</button><button class="g" onclick="allJ('${s.id}',false)">Clear all</button>`+
-  Array.from({length:30},(_,i)=>i+1).map(j=>{const ss=surahsOf(j),sel=mine.filter(x=>x.juz===j).map(x=>x.surah),all=sel.length===ss.length;
-  return `<details style="border:1px solid var(--bd);border-radius:8px;margin:4px 0;padding:6px 10px" ${openJ.has(s.id+':'+j)?'open':''} ontoggle="this.open?openJ.add('${s.id}:${j}'):openJ.delete('${s.id}:${j}')"><summary><b>Juz ${j}</b> <span class="mu">· ${sel.length}/${ss.length} surahs${all?' ✔':''}</span></summary>
-  <label style="display:block;margin:6px 0"><input class="ck" type="checkbox" ${all?'checked':''} onchange="setJuz('${s.id}',${j},this.checked)"><b>All surahs in Juz ${j}</b></label>
-  ${ss.map(n=>`<label style="display:inline-block;margin:2px 10px 2px 0"><input class="ck" type="checkbox" ${sel.includes(n)?'checked':''} onchange="togSurah('${s.id}',${j},${n},this.checked)">${n}. ${SN[n-1]}</label>`).join('')}</details>`}).join('')+
-  `<h2 style="margin-top:14px">Extra single lessons</h2>`+(D.lessons.map(l=>`<label style="display:block"><input class="ck" type="checkbox" ${ml.includes(l.id)?'checked':''} onchange="togLes('${s.id}','${l.id}',this.checked)">Juz ${l.juz}${l.surah?' · '+SN[l.surah-1]:''} · ${esc(l.title)}</label>`).join('')||'<p class="mu">Create lessons first.</p>');
+  const ss=surahsOf(selJ),sel=mine.filter(x=>x.juz===selJ).map(x=>x.surah),all=sel.length===ss.length;
+  return `<h2 style="margin-top:12px">Allocate juz &amp; surahs</h2><p class="mu">Pick a juz on the left, then tick its surahs on the right.</p>
+  <button class="g" onclick="allJ('${s.id}',true)">All 30 juz</button><button class="g" onclick="allJ('${s.id}',false)">Clear all</button>
+  <div class="sel" style="margin-top:8px"><div class="jl">${Array.from({length:30},(_,i)=>i+1).map(j=>{const c=mine.filter(x=>x.juz===j).length;return `<button class="${selJ===j?'':'g'}" onclick="selJ=${j};adminView()">Juz ${j}${c?` <span class="badge">${c}</span>`:''}</button>`}).join('')}</div>
+  <div style="border:1px solid var(--bd);border-radius:10px;padding:10px"><b>Juz ${selJ} · surahs</b>
+  <label style="display:block;margin:8px 0"><input class="ck" type="checkbox" ${all?'checked':''} onchange="setJuz('${s.id}',${selJ},this.checked)"><b>All surahs in Juz ${selJ}</b></label>
+  ${ss.map(n=>`<label style="display:block;padding:4px 0;border-top:1px solid var(--bd)"><input class="ck" type="checkbox" ${sel.includes(n)?'checked':''} onchange="togSurah('${s.id}',${selJ},${n},this.checked)">Surah ${n} · ${SN[n-1]}</label>`).join('')}</div></div>
+  <h2 style="margin-top:14px">${esc(s.name)} will see</h2>${chips(mine)||'<p class="mu">Nothing allocated yet.</p>'}
+  <h2 style="margin-top:14px">Extra single lessons</h2>`+(D.lessons.map(l=>`<label style="display:block"><input class="ck" type="checkbox" ${ml.includes(l.id)?'checked':''} onchange="togLes('${s.id}','${l.id}',this.checked)">Juz ${l.juz}${l.surah?' · '+SN[l.surah-1]:''} · ${esc(l.title)}</label>`).join('')||'<p class="mu">Create lessons first.</p>');
 }
 function lessonsTab(){
   return `<div class="card"><h2>Create lesson</h2><input id="lt" placeholder="Lesson title"><select id="lj" onchange="fillSurah()">${Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('')}</select>
