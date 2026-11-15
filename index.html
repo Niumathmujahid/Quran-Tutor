@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Niumath Quran Classes</title>
+<style>
+:root{--bg:#f6f3ec;--card:#fff;--tx:#1f2a24;--mu:#6b7770;--pr:#1d6b4f;--pt:#fff;--bd:#ddd6c6;--wa:#b4531a}
+@media (prefers-color-scheme:dark){:root{--bg:#121a16;--card:#1b2620;--tx:#e8eee9;--mu:#98a69d;--pr:#4cb88d;--pt:#0c1511;--bd:#2f3d35;--wa:#e8914f}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,sans-serif}
+.w{max-width:900px;margin:0 auto;padding:16px}h1{font-size:22px;margin:0}h2{font-size:18px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:12px 0}
+input,textarea,select{width:100%;padding:10px;margin:4px 0 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+button{background:var(--pr);color:var(--pt);border:0;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer;margin:2px}
+button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}button.d{background:var(--wa)}
+.top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.tabs button{background:transparent;color:var(--tx);border:1px solid var(--bd)}.tabs button.on{background:var(--pr);color:var(--pt)}
+.juz{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:4px}
+.juz label{border:1px solid var(--bd);border-radius:6px;padding:4px;text-align:center;font-size:14px;cursor:pointer}
+.juz input,.ck{width:auto;margin:0 4px 0 0}.mu{color:var(--mu);font-size:14px}.err{color:var(--wa)}
+.badge{background:var(--wa);color:#fff;border-radius:10px;padding:1px 8px;font-size:12px}
+</style></head><body><div class="w" id="app">Loading…</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ====== PASTE YOUR SUPABASE VALUES HERE ====== */
+const SUPABASE_URL='https://xwbplgjrrkqlgnularpg.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_S4_PqS_OcyZkkOOvwJ7_fg_Zbip-_Qo';
+/* ============================================= */
+const DOM='@niumath.app',$=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let dev;try{dev=localStorage.getItem('nm_dev');if(!dev){dev=crypto.randomUUID();localStorage.setItem('nm_dev',dev)}}catch(e){dev=crypto.randomUUID()}
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{global:{headers:{'x-device-id':dev}}});
+let me=null,msg='',tab='students',editing=null,D={students:[],lessons:[],juz:[],sl:[],dv:[]},S={lessons:[],juz:[],waiting:false};
+const view=h=>$('#app').innerHTML=h;
+async function boot(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){me=null;return view(loginView())}
+  const{data:p}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+  if(!p){await sb.auth.signOut();msg='Account not found.';return view(loginView())}
+  me=p;p.role==='admin'?await loadAdmin():await loadStudent();
+}
+function loginView(){return `<div class="card"><h1>🕌 Niumath Quran Classes</h1><p class="mu">Sign in with your username and password.</p>
+<label>Username</label><input id="u" autocomplete="username"><label>Password</label><input id="p" type="password" autocomplete="current-password">
+<button onclick="login()">Sign in</button><p class="err">${esc(msg)}</p></div>`}
+async function login(){
+  const u=$('#u').value.trim().toLowerCase(),p=$('#p').value;msg='';
+  const{error}=await sb.auth.signInWithPassword({email:u+DOM,password:p});
+  if(error)msg='Wrong username or password.';
+  msg?view(loginView()):boot();
+}
+const logout=async()=>{await sb.auth.signOut();msg='';boot()};
+/* ---------- student ---------- */
+async function loadStudent(){
+  const{data:d}=await sb.from('devices').select('*').eq('student_id',me.id).maybeSingle();
+  if(!d||d.device_id!==dev){
+    if(!d||d.pending_id!==dev)await sb.rpc('request_device',{dev});
+    S.waiting=true;return studentView();
+  }
+  S.waiting=false;
+  const[l,j]=await Promise.all([sb.from('lessons').select('*').order('juz'),sb.from('student_juz').select('juz').order('juz')]);
+  S.lessons=l.data||[];S.juz=(j.data||[]).map(x=>x.juz);studentView();
+}
+function studentView(){
+  const head=`<div class="top"><h1>Salaam, ${esc(me.name)}</h1><button class="g" onclick="logout()">Sign out</button></div>`;
+  if(S.waiting)return view(head+`<div class="card"><h2>Waiting for approval</h2><p>This device needs approval from the Niumath admin. Once approved, tap the button below.</p><button onclick="boot()">Check again</button></div>`);
+  view(head+`<p class="mu">Your juz: ${S.juz.join(', ')||'none yet'}</p>`+(S.lessons.map(l=>`<div class="card"><span class="mu">Juz ${l.juz}</span><h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open lesson link ↗</a></p>`:''}</div>`).join('')||'<div class="card mu">No lessons assigned yet.</div>'));
+}
+/* ---------- admin ---------- */
+async function loadAdmin(){
+  const q=t=>sb.from(t).select('*');
+  const[s,l,j,sl,dv]=await Promise.all([q('profiles').eq('role','student').order('name'),q('lessons').order('juz'),q('student_juz'),q('student_lessons'),q('devices')]);
+  D={students:s.data||[],lessons:l.data||[],juz:j.data||[],sl:sl.data||[],dv:dv.data||[]};adminView();
+}
+const dvOf=id=>D.dv.find(x=>x.student_id===id)||{};
+function adminView(){
+  const pend=D.dv.filter(x=>x.pending_id).length;
+  const T=(k,t)=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';editing=null;adminView()">${t}</button>`;
+  view(`<div class="top"><h1>Admin · Niumath</h1><button class="g" onclick="logout()">Sign out</button></div>
+  <div class="tabs" style="margin:10px 0">${T('students','Students')}${T('lessons','Lessons')}${T('approvals','Approvals'+(pend?` <span class="badge">${pend}</span>`:''))}</div>
+  <p class="err">${esc(msg)}</p>`+(tab==='students'?studentsTab():tab==='lessons'?lessonsTab():approvalsTab()));
+}
+function studentsTab(){
+  return `<div class="card"><h2>Add student</h2><input id="sn" placeholder="Full name"><input id="su" placeholder="Username (letters/numbers)"><input id="sp" placeholder="Password (6+ characters)">
+  <button onclick="addStudent()">Add student</button></div>`+(D.students.map(s=>`<div class="card"><div class="top"><div><b>${esc(s.name)}</b> <span class="mu">@${esc(s.username)} · ${D.juz.filter(x=>x.student_id===s.id).length} juz · ${dvOf(s.id).device_id?'device linked':'no device'}</span></div>
+  <div><button class="g" onclick="editing=${editing===s.id?'null':`'${s.id}'`};adminView()">${editing===s.id?'Close':'Juz & lessons'}</button><button class="g" onclick="act(()=>sb.from('devices').update({device_id:null,pending_id:null}).eq('student_id','${s.id}'))">Reset device</button><button class="d" onclick="delStudent('${s.id}')">Delete</button></div></div>${editing===s.id?assign(s):''}</div>`).join('')||'<p class="mu">No students yet.</p>');
+}
+function assign(s){
+  const mj=D.juz.filter(x=>x.student_id===s.id).map(x=>x.juz),ml=D.sl.filter(x=>x.student_id===s.id).map(x=>x.lesson_id);
+  return `<h2 style="margin-top:12px">Juz this student can see</h2><button class="g" onclick="allJuz('${s.id}',true)">All 30</button><button class="g" onclick="allJuz('${s.id}',false)">None</button>
+  <div class="juz">${Array.from({length:30},(_,i)=>i+1).map(n=>`<label><input type="checkbox" ${mj.includes(n)?'checked':''} onchange="togJuz('${s.id}',${n},this.checked)">${n}</label>`).join('')}</div>
+  <h2 style="margin-top:14px">Extra lessons for this student</h2>`+(D.lessons.map(l=>`<label style="display:block"><input class="ck" type="checkbox" ${ml.includes(l.id)?'checked':''} onchange="togLes('${s.id}','${l.id}',this.checked)">Juz ${l.juz} · ${esc(l.title)}</label>`).join('')||'<p class="mu">Create lessons first.</p>');
+}
+function lessonsTab(){
+  return `<div class="card"><h2>Create lesson</h2><input id="lt" placeholder="Lesson title"><select id="lj">${Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('')}</select>
+  <textarea id="lb" rows="4" placeholder="Lesson notes / instructions"></textarea><input id="ll" placeholder="Video or file link (optional, https://…)"><button onclick="addLesson()">Save lesson</button></div>`+
+  (D.lessons.map(l=>`<div class="card top"><div><span class="mu">Juz ${l.juz}</span><br><b>${esc(l.title)}</b></div><button class="d" onclick="delLesson('${l.id}')">Delete</button></div>`).join('')||'<p class="mu">No lessons yet.</p>');
+}
+function approvalsTab(){
+  return D.dv.filter(x=>x.pending_id).map(x=>{const s=D.students.find(y=>y.id===x.student_id)||{};return `<div class="card top"><div><b>${esc(s.name)}</b><br><span class="mu">New device wants access · ${new Date(x.pending_at).toLocaleString()}${x.device_id?' · replaces current device':''}</span></div>
+  <div><button onclick="act(()=>sb.from('devices').update({device_id:'${x.pending_id}',pending_id:null}).eq('student_id','${x.student_id}'))">Approve</button><button class="d" onclick="act(()=>sb.from('devices').update({pending_id:null}).eq('student_id','${x.student_id}'))">Reject</button></div></div>`}).join('')||'<div class="card mu">No pending requests.</div>';
+}
+async function act(fn){const r=await fn();msg=r&&r.error?r.error.message:'';await loadAdmin()}
+async function addStudent(){
+  const name=$('#sn').value.trim(),u=$('#su').value.trim().toLowerCase(),p=$('#sp').value;
+  if(!name||!/^[a-z0-9_.]{3,}$/.test(u)||p.length<6){msg='Fill all fields: username 3+ letters/numbers, password 6+.';return adminView()}
+  const tmp=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,storageKey:'tmp'}});
+  const{data,error}=await tmp.auth.signUp({email:u+DOM,password:p});
+  if(error||!data.user){msg=error?error.message:'Could not create user.';return adminView()}
+  await act(async()=>{const r=await sb.from('profiles').insert({id:data.user.id,username:u,name,role:'student'});if(r.error)return r;return sb.from('devices').insert({student_id:data.user.id})});
+}
+const togJuz=(id,n,on)=>act(()=>on?sb.from('student_juz').insert({student_id:id,juz:n}):sb.from('student_juz').delete().eq('student_id',id).eq('juz',n));
+const allJuz=(id,on)=>act(async()=>{await sb.from('student_juz').delete().eq('student_id',id);if(on)return sb.from('student_juz').insert(Array.from({length:30},(_,i)=>({student_id:id,juz:i+1})))});
+const togLes=(id,l,on)=>act(()=>on?sb.from('student_lessons').insert({student_id:id,lesson_id:l}):sb.from('student_lessons').delete().eq('student_id',id).eq('lesson_id',l));
+const delStudent=id=>confirm('Delete this student?')&&act(()=>sb.from('profiles').delete().eq('id',id));
+const delLesson=id=>confirm('Delete this lesson?')&&act(()=>sb.from('lessons').delete().eq('id',id));
+function addLesson(){const t=$('#lt').value.trim();if(!t){msg='Title required.';return adminView()}
+  act(()=>sb.from('lessons').insert({title:t,juz:+$('#lj').value,body:$('#lb').value,link:$('#ll').value.trim()}))}
+boot();
+</script></body></html>
