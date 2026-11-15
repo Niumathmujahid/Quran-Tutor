@@ -57,7 +57,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 </svg>
 <div class="photo sc"></div>
 <div id="sm" onclick="if(event.target===this)this.style.display='none'"><div class="smc"><div class="top"><h2 id="smt"></h2><button onclick="$('#sm').style.display='none'">Close ✕</button></div><div id="smb"></div></div></div>
-<div id="ver">Version 1.6 · 15 Nov 2026</div>
+<div id="ver">Version 1.7 · 15 Nov 2026</div>
 <div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div></div></div>
 <div class="w" id="app">Loading…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
@@ -80,7 +80,7 @@ async function showSurah(n){
     const d=SC[n],strip=t=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'').startsWith('بسم');
     $('#smb').innerHTML='<p class="ahd">'+d.name+'</p>'+(n!==1&&n!==9?'<p class="bis">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>':'')+
     '<div class="qt" dir="rtl" lang="ar">'+d.ayahs.map(a=>{let t=a.text;if(n!==1&&a.numberInSurah===1&&strip(t))t=t.split(' ').slice(4).join(' ');return esc(t)+' <span class="an">﴿'+a.numberInSurah+'﴾</span>'}).join(' ')+'</div>';
-  }catch(e){$('#smb').innerHTML='<p class="err">Could not load the surah. Please check your internet connection and try again.</p>'}
+  }catch(e){$('#smb').innerHTML='<p class="err">Could not load the surah text. Check your internet connection and try again.</p><p class="mu">Details: '+esc(e&&e.message?e.message:'no data received from api.alquran.cloud')+'</p><button onclick="showSurah('+n+')">Try again</button>'}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#sm').style.display='none'});
 const DOM='@niumath.app',$=s=>document.querySelector(s);
@@ -169,7 +169,7 @@ function assign(s){
 }
 function lessonsTab(){
   return `<div class="card"><h2>Create lesson</h2><input id="lt" placeholder="Lesson title"><select id="lj" onchange="fillSurah()">${Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('')}</select>
-  <select id="ls"><option value="">Whole juz (any surah)</option>${surahsOf(1).map(n=>`<option value="${n}">${n}. ${SN[n-1]}</option>`).join('')}</select>
+  <select id="ls" onchange="if(this.value)showSurah(+this.value)"><option value="">Whole juz (any surah)</option>${surahsOf(1).map(n=>`<option value="${n}">${n}. ${SN[n-1]}</option>`).join('')}</select>
   <textarea id="lb" rows="4" placeholder="Lesson notes / instructions"></textarea><input id="ll" placeholder="Video or file link (optional, https://…)"><button onclick="addLesson()">Save lesson</button></div>`+
   (D.lessons.map(l=>`<div class="card top"><div><span class="mu">Juz ${l.juz}${l.surah?' · '+SN[l.surah-1]:''}</span><br><b>${esc(l.title)}</b></div><button class="d" onclick="delLesson('${l.id}')">Delete</button></div>`).join('')||'<p class="mu">No lessons yet.</p>');
 }
