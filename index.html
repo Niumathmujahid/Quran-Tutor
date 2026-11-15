@@ -40,6 +40,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 .qt{font:30px/2.3 'Amiri Quran','Amiri','Traditional Arabic',serif;text-align:justify}.an{color:var(--pr);font-size:22px}
 .bis,.ahd{text-align:center;font:32px/1.8 'Amiri Quran','Amiri',serif;margin:6px 0}
 .chip{border:0;cursor:pointer;font:inherit;font-size:14px}
+#ver{position:fixed;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:30;background:rgba(0,0,0,.55);color:#f5d98a;font-size:12px;padding:3px 10px;border-radius:12px;pointer-events:none}
 </style></head><body><svg class="bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
 <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050f24"/><stop offset=".6" stop-color="#0c3d44"/><stop offset="1" stop-color="#d9a441"/></linearGradient>
 <radialGradient id="gl"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
@@ -56,6 +57,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 </svg>
 <div class="photo sc"></div>
 <div id="sm" onclick="if(event.target===this)this.style.display='none'"><div class="smc"><div class="top"><h2 id="smt"></h2><button onclick="$('#sm').style.display='none'">Close ✕</button></div><div id="smb"></div></div></div>
+<div id="ver">Version 1.6 · 15 Nov 2026</div>
 <div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div></div></div>
 <div class="w" id="app">Loading…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
