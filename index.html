@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Niumath Quran Classes</title>
+<title>Ahlul Quran Classes</title>
 <style>
 :root{--bg:#f6f3ec;--card:#fff;--tx:#1f2a24;--mu:#6b7770;--pr:#1d6b4f;--pt:#fff;--bd:#ddd6c6;--wa:#b4531a}
 @media (prefers-color-scheme:dark){:root{--bg:#121a16;--card:#1b2620;--tx:#e8eee9;--mu:#98a69d;--pr:#4cb88d;--pt:#0c1511;--bd:#2f3d35;--wa:#e8914f}}
@@ -50,7 +50,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 <path d="M530 540 Q530 440 600 440 Q670 440 670 540Z" fill="#1f9d6b"/><path d="M600 440 V405" stroke="#d9b24c" stroke-width="3"/><circle cx="600" cy="400" r="7" fill="#d9b24c"/>
 <rect y="700" width="1200" height="100" fill="#0f2418"/><text x="600" y="772" text-anchor="middle" fill="#f5d98a" font-size="28" font-family="Amiri,serif">المدينة المنورة</text></g>
 </svg>
-<div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Niumath Quran Classes</div></div></div>
+<div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div></div></div>
 <div class="w" id="app">Loading…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -72,7 +72,7 @@ async function boot(){
   me=p;p.role==='admin'?await loadAdmin():await loadStudent();
 }
 let reg=false;
-function loginView(){return `<div class="card"><p class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p><h1>🕌 Niumath Quran Classes</h1><p class="mu">${reg?'Create your student account.':'Sign in with your username and password.'}</p>
+function loginView(){return `<div class="card"><p class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p><h1>🕌 Ahlul Quran Classes</h1><p class="mu">${reg?'Create your student account.':'Sign in with your username and password.'}</p>
 ${reg?'<label>Full name</label><input id="rn" autocomplete="name">':''}<label>Username</label><input id="u" autocomplete="username"><label>Password</label><input id="p" type="password" autocomplete="${reg?'new-password':'current-password'}">
 ${reg?'<label>Confirm password</label><input id="p2" type="password">':''}<button onclick="${reg?'register()':'login()'}">${reg?'Register':'Sign in'}</button> <button class="g" onclick="reg=!reg;msg='';view(loginView())">${reg?'I already have an account':'New student? Register'}</button><p class="err">${esc(msg)}</p></div>`}
 function doorOpen(){const d=$('#door');d.style.display='none';d.className='';void d.offsetWidth;d.style.display='flex';setTimeout(()=>d.className='go',900);setTimeout(()=>d.style.display='none',2900)}
