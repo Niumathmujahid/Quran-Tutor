@@ -48,6 +48,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 .ring{width:84px;height:84px;border-radius:50%;background:conic-gradient(var(--pr) calc(var(--p)*1%),var(--bd) 0);display:grid;place-items:center;position:relative}.ring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--card)}.ring b{position:relative}
 .ay{border-radius:8px;padding:2px 4px;cursor:pointer;transition:background .15s;-webkit-box-decoration-break:clone;box-decoration-break:clone}.ay:hover,.ay.on{background:rgba(217,164,65,.38)}
 #bal{display:none;position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:8px;z-index:30;border-radius:14px;padding:5px 12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}#bal.due{background:#d9a441;color:#2b1d00}#bal.ok{background:var(--pr);color:var(--pt)}
+@keyframes pu{50%{opacity:.35}}#dhint{animation:pu 1.4s infinite}#door{cursor:pointer}
 </style></head><body><svg class="bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
 <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050f24"/><stop offset=".6" stop-color="#0c3d44"/><stop offset="1" stop-color="#d9a441"/></linearGradient>
 <radialGradient id="gl"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
@@ -66,7 +67,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 <div id="sm" onclick="if(event.target===this)this.style.display='none'"><div class="smc"><div class="top"><h2 id="smt"></h2><button onclick="$('#sm').style.display='none'">Close ✕</button></div><div id="smb"></div></div></div>
 <div id="ver"></div>
 <div id="bal" onclick="document.getElementById('fees')&&document.getElementById('fees').scrollIntoView({behavior:'smooth'})"></div>
-<div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div></div></div>
+<div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div><div id="dhint" style="display:none;margin-top:22px;font-size:20px">🔊 Tap to enter</div></div></div>
 <div class="w" id="app">Loading…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -148,15 +149,21 @@ sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){REC=true;view(passVi
 function passView(){return `<div class="card"><p class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p><h1>Set your password</h1><p class="mu">Welcome to Ahlul Quran Classes. Choose a password for your account.</p>
 <label>New password</label><input id="np" type="password" autocomplete="new-password"><label>Confirm password</label><input id="np2" type="password"><button onclick="setPass()">Save password</button><p class="err">${esc(msg)}</p></div>`}
 async function setPass(){const a=$('#np').value;msg='';if(a.length<6)msg='Use 6 or more characters.';else if(a!==$('#np2').value)msg='Passwords do not match.';if(msg)return view(passView());
-  const{error}=await sb.auth.updateUser({password:a});if(error){msg=error.message;return view(passView())}REC=false;history.replaceState(null,'',location.pathname);doorOpen();boot()}
+  const{error}=await sb.auth.updateUser({password:a});if(error){msg=error.message;return view(passView())}REC=false;history.replaceState(null,'',location.pathname);boot()}
 async function forgot(){const u=($('#u').value||'').trim().toLowerCase();if(!u.includes('@')){msg='Type your email address in the first box, then tap Forgot password.';return view(loginView())}
   const{error}=await sb.auth.resetPasswordForEmail(u,{redirectTo:location.origin+location.pathname});msg=error?error.message:'If this email is registered, a link was sent. Check your inbox and spam folder.';view(loginView())}
-function doorOpen(){const d=$('#door');d.style.display='none';d.className='';void d.offsetWidth;d.style.display='flex';setTimeout(()=>d.className='go',900);setTimeout(()=>d.style.display='none',2900)}
+const BIS=new Audio('https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3');BIS.preload='auto';let opened=false;
+function openDoor(){if(opened)return;opened=true;const d=$('#door');d.className='go';setTimeout(()=>d.style.display='none',2000)}
+function intro(){
+  const d=$('#door'),h=$('#dhint'),after=()=>setTimeout(openDoor,500),guard=()=>setTimeout(openDoor,12000);
+  BIS.onended=after;BIS.onerror=()=>setTimeout(openDoor,1200);
+  BIS.play().then(guard).catch(()=>{h.style.display='block';d.onclick=()=>{d.onclick=null;h.style.display='none';guard();BIS.play().catch(()=>setTimeout(openDoor,800))}});
+}
 async function login(){
   const u=$('#u').value.trim().toLowerCase(),p=$('#p').value;msg='';
   const{error}=await sb.auth.signInWithPassword({email:u.includes('@')?u:u+DOM,password:p});
   if(error)msg='Wrong username or password.';
-  if(msg)view(loginView());else{doorOpen();boot()}
+  if(msg)view(loginView());else boot()
 }
 const logout=async()=>{await sb.auth.signOut();msg='';boot()};
 /* ---------- student ---------- */
@@ -261,6 +268,6 @@ async function addLesson(){
   act(async()=>{const r=await sb.from('lessons').insert(row).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
 }
 $('#smb').addEventListener('click',e=>{const a=e.target.closest('.ay');if(!a)return;const was=a.classList.contains('on');document.querySelectorAll('.ay.on').forEach(x=>x.classList.remove('on'));if(!was)a.classList.add('on')});
-$('#ver').textContent='Version 2.2 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-doorOpen();boot();
+$('#ver').textContent='Version 2.3 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+intro();boot();
 </script></body></html>
