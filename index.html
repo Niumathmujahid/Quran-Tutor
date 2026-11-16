@@ -46,6 +46,8 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 .jp{border:1px solid var(--bd);border-left:6px solid #d9a441;border-radius:10px;padding:10px 12px;margin:10px 0}.jp.ok{border-left-color:var(--pr)}
 .pill{border-radius:12px;padding:2px 10px;font-size:13px;display:inline-block}.pill.ok{background:var(--pr);color:var(--pt)}.pill.go{background:#d9a441;color:#2b1d00}
 .ring{width:84px;height:84px;border-radius:50%;background:conic-gradient(var(--pr) calc(var(--p)*1%),var(--bd) 0);display:grid;place-items:center;position:relative}.ring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--card)}.ring b{position:relative}
+.ay{border-radius:8px;padding:2px 4px;cursor:pointer;transition:background .15s;-webkit-box-decoration-break:clone;box-decoration-break:clone}.ay:hover,.ay.on{background:rgba(217,164,65,.38)}
+#bal{display:none;position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:8px;z-index:30;border-radius:14px;padding:5px 12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}#bal.due{background:#d9a441;color:#2b1d00}#bal.ok{background:var(--pr);color:var(--pt)}
 </style></head><body><svg class="bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
 <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050f24"/><stop offset=".6" stop-color="#0c3d44"/><stop offset="1" stop-color="#d9a441"/></linearGradient>
 <radialGradient id="gl"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
@@ -63,6 +65,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 <div class="photo sc"></div>
 <div id="sm" onclick="if(event.target===this)this.style.display='none'"><div class="smc"><div class="top"><h2 id="smt"></h2><button onclick="$('#sm').style.display='none'">Close ✕</button></div><div id="smb"></div></div></div>
 <div id="ver"></div>
+<div id="bal" onclick="document.getElementById('fees')&&document.getElementById('fees').scrollIntoView({behavior:'smooth'})"></div>
 <div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div></div></div>
 <div class="w" id="app">Loading…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
@@ -84,7 +87,7 @@ async function showSurah(n){
     if(!SC[n]){const r=await fetch('https://api.alquran.cloud/v1/surah/'+n+'/quran-uthmani');const j=await r.json();if(!j.data)throw 0;SC[n]=j.data}
     const d=SC[n],strip=t=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'').startsWith('بسم');
     $('#smb').innerHTML='<p class="ahd">'+d.name+'</p>'+(n!==1&&n!==9?'<p class="bis">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>':'')+
-    '<div class="qt" dir="rtl" lang="ar">'+d.ayahs.map(a=>{let t=a.text;if(n!==1&&a.numberInSurah===1&&strip(t))t=t.split(' ').slice(4).join(' ');return esc(t)+' <span class="an">﴿'+a.numberInSurah+'﴾</span>'}).join(' ')+'</div>';
+    '<div class="qt" dir="rtl" lang="ar">'+d.ayahs.map(a=>{let t=a.text;if(n!==1&&a.numberInSurah===1&&strip(t))t=t.split(' ').slice(4).join(' ');return '<span class="ay">'+esc(t)+' <span class="an">﴿'+a.numberInSurah+'﴾</span></span>'}).join(' ')+'</div>';
   }catch(e){$('#smb').innerHTML='<p class="err">Could not load the surah text. Check your internet connection and try again.</p><p class="mu">Details: '+esc(e&&e.message?e.message:'no data received from api.alquran.cloud')+'</p><button onclick="showSurah('+n+')">Try again</button>'}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#sm').style.display='none'});
@@ -102,6 +105,25 @@ function progress(pt){
   return `<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px"><div class="ring" style="--p:${pct}"><b>${pct}%</b></div><div><b>${sd} of ${pt.length} surahs completed</b><br><span class="mu">${jd} of ${js.length} juz completed</span></div></div>`+
   js.map((j,i)=>{const q=st[i];return `<div class="jp ${q.done?'ok':''}"><div class="top"><b>Juz ${j}</b><span class="pill ${q.done?'ok':'go'}">${q.done?'✔ Completed in '+q.days+' day'+(q.days>1?'s':''):'⏳ In progress · day '+q.days}</span></div>${bar(q.pct,q.done)}<div>${by[j].sort((a,b)=>a.surah-b.surah).map(r=>`<button class="chip ${r.completed_at?'':'pend'}" onclick="showSurah(${r.surah})">${r.completed_at?'✔':'⏳'} Surah ${r.surah} · ${SN[r.surah-1]}${r.completed_at?' · '+dys(r)+'d':''}</button>`).join('')}</div></div>`}).join('')}
 const doneBtn=(id,j,n,mine)=>{const r=mine.find(x=>x.juz===j&&x.surah===n);if(!r)return '';return r.completed_at?`<button class="g" onclick="setDone('${id}',${j},${n},false)">✔ Completed · ${dys(r)}d (undo)</button>`:`<button onclick="setDone('${id}',${j},${n},true)">Mark complete</button>`};
+const CUR='Rs.';
+const money=n=>CUR+' '+Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
+const balOf=a=>a.reduce((t,x)=>t+(x.kind==='charge'?1:-1)*+x.amount,0);
+function feeView(){
+  if(!S.pay.length)return '';const b=balOf(S.pay);
+  const top=b>0?`<div class="card" style="border-left:6px solid #d9a441"><b>Assalamu alaikum, ${esc(me.name)}.</b><p>Your class fee balance is <b>${money(b)}</b>. Please settle it at your earliest convenience and let the admin know once you have paid. Jazakallahu khayran.</p><p class="ar" lang="ar" dir="rtl" style="margin:4px 0">مَطْلُ الْغَنِيِّ ظُلْمٌ</p><p class="mu" style="margin:0">“Delaying payment of a debt by one who is able to pay is an injustice.” (Sahih al-Bukhari and Sahih Muslim)</p></div>`:`<div class="card" style="border-left:6px solid var(--pr)"><b>✔ All fees paid${b<0?' · advance '+money(-b):''}.</b> Jazakallahu khayran.</div>`;
+  return top+`<div class="card" id="fees"><b>My fees</b>`+S.pay.map(x=>`<div class="top" style="border-top:1px solid var(--bd);padding:5px 0"><span>${new Date(x.created_at).toLocaleDateString('en-GB')} · ${x.kind==='payment'?'✔ Paid':'Fee'}${x.note?' · '+esc(x.note):''}</span><b>${money(x.amount)}</b></div>`).join('')+`</div>`}
+function showBal(){const e=$('#bal');if(!S.pay.length)return;const b=balOf(S.pay);e.className=b>0?'due':'ok';e.textContent=b>0?'Balance due: '+money(b):'✔ Fees paid';e.style.display='block'}
+function payTab(){
+  const tot=D.students.reduce((t,s)=>t+Math.max(0,balOf(D.pay.filter(x=>x.student_id===s.id))),0);
+  return `<div class="card"><h2>Charge all students</h2><p class="mu">Total outstanding: <b>${money(tot)}</b></p><input id="ba" type="number" min="1" placeholder="Fee amount"><input id="bn" placeholder="Note (e.g. November 2026 fee)"><button onclick="chargeAll()">Add fee to every student</button></div>`+
+  (D.students.map(s=>{const h=D.pay.filter(x=>x.student_id===s.id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)),b=balOf(h),sum=k=>h.filter(x=>x.kind===k).reduce((t,x)=>t+ +x.amount,0);
+  return `<div class="card"><div class="top"><div><b>${esc(s.name)}</b><br><span class="mu">Charged ${money(sum('charge'))} · Paid ${money(sum('payment'))}</span></div><span class="pill ${b>0?'go':'ok'}">${b>0?'Due '+money(b):b<0?'Advance '+money(-b):'✔ Paid up'}</span></div>
+  <input id="pa${s.id}" type="number" min="1" placeholder="Amount"><input id="pn${s.id}" placeholder="Note (optional)"><button onclick="addPay('${s.id}','payment')">✔ Record payment</button><button class="g" onclick="addPay('${s.id}','charge')">+ Add charge</button>
+  ${h.length?`<details style="margin-top:8px"><summary>History (${h.length})</summary>${h.map(x=>`<div class="top" style="border-top:1px solid var(--bd);padding:4px 0"><span>${new Date(x.created_at).toLocaleDateString('en-GB')} · ${x.kind==='payment'?'✔ Payment':'Charge'} ${money(x.amount)}${x.note?' · '+esc(x.note):''}</span><button class="d" onclick="delPay('${x.id}')">Delete</button></div>`).join('')}</details>`:''}</div>`}).join('')||'<p class="mu">No students yet.</p>');
+}
+function addPay(id,kind){const a=+$('#pa'+id).value;if(!(a>0)){msg='Enter an amount.';return adminView()}act(()=>sb.from('payments').insert({student_id:id,kind,amount:a,note:$('#pn'+id).value.trim()}))}
+function chargeAll(){const a=+$('#ba').value;if(!(a>0)){msg='Enter an amount.';return adminView()}if(!confirm('Add '+money(a)+' to every student?'))return;const note=$('#bn').value.trim();act(()=>sb.from('payments').insert(D.students.map(s=>({student_id:s.id,kind:'charge',amount:a,note}))))}
+const delPay=id=>confirm('Delete this entry?')&&act(()=>sb.from('payments').delete().eq('id',id));
 const fileBtns=l=>(l.files||[]).map(f=>`<button class="g" onclick="openFile('${esc(f.path)}')">📎 ${esc(f.name)}</button>`).join('');
 async function openFile(path){const w=window.open('','_blank');const{data,error}=await sb.storage.from('lesson-files').createSignedUrl(path,600);if(error||!data){if(w)w.close();alert('Could not open the file: '+(error?error.message:'no access'));return}if(w)w.location=data.signedUrl;else location.href=data.signedUrl}
 const DOM='@niumath.app',$=s=>document.querySelector(s);
@@ -109,7 +131,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 let dev;try{dev=localStorage.getItem('nm_dev');if(!dev){dev=crypto.randomUUID();localStorage.setItem('nm_dev',dev)}}catch(e){dev=crypto.randomUUID()}
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{global:{headers:{'x-device-id':dev}}});
 let me=null,msg='',tab='students',editing=null,D={students:[],lessons:[],juz:[],sl:[],dv:[]},S={lessons:[],juz:[],waiting:false};
-const view=h=>$('#app').innerHTML=h;
+const view=h=>{$('#app').innerHTML=h;$('#bal').style.display='none'};
 async function boot(){
   const{data:{session}}=await sb.auth.getSession();
   if(REC&&session)return view(passView());if(!session){me=null;return view(loginView())}
@@ -145,29 +167,29 @@ async function loadStudent(){
     S.waiting=true;return studentView();
   }
   S.waiting=false;
-  const[l,j]=await Promise.all([sb.from('lessons').select('*').order('juz'),sb.from('student_portions').select('juz,surah,started_at,completed_at')]);
-  S.lessons=l.data||[];S.pt=j.data||[];studentView();
+  const[l,j,pm]=await Promise.all([sb.from('lessons').select('*').order('juz'),sb.from('student_portions').select('juz,surah,started_at,completed_at'),sb.from('payments').select('*').order('created_at',{ascending:false})]);
+  S.lessons=l.data||[];S.pt=j.data||[];S.pay=pm.data||[];studentView();
 }
 function studentView(){
   const head=`<div class="top"><h1>Salaam, ${esc(me.name)}</h1><button class="g" onclick="logout()">Sign out</button></div>`;
   if(S.waiting)return view(head+`<div class="card"><h2>Waiting for approval</h2><p>This device needs approval from the admin. Once approved, tap the button below.</p><button onclick="boot()">Check again</button></div>`);
   const card=l=>`<div class="card"><span class="mu">${lbl(l)}</span>${l.surah?` <button class="g" onclick="showSurah(${l.surah})">📖 Read</button>`:''}<h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${fileBtns(l)}${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open attachment ↗</a></p>`:''}</div>`;
   const sec=k=>{const a=S.lessons.filter(l=>(l.kind||'quran')===k);return a.length?`<h2 style="color:#fff;text-shadow:0 1px 4px #000;margin-top:18px">${KI[k]}</h2>`+a.map(card).join(''):''};
-  view(head+`<div class="card"><b>My progress</b>${progress(S.pt)}</div>`+(sec('quran')+sec('hadith')+sec('dua')||'<div class="card mu">No lessons assigned yet.</div>'));
+  view('<div style="height:34px"></div>'+head+feeView()+`<div class="card"><b>My progress</b>${progress(S.pt)}</div>`+(sec('quran')+sec('hadith')+sec('dua')||'<div class="card mu">No lessons assigned yet.</div>'));showBal();
 }
 /* ---------- admin ---------- */
 async function loadAdmin(){
   const q=t=>sb.from(t).select('*');
-  const[s,l,pt,sl,dv]=await Promise.all([q('profiles').eq('role','student').order('name'),q('lessons').order('juz'),allRows('student_portions'),q('student_lessons'),q('devices')]);
-  D={students:s.data||[],lessons:l.data||[],pt,sl:sl.data||[],dv:dv.data||[]};adminView();
+  const[s,l,pt,sl,dv,py]=await Promise.all([q('profiles').eq('role','student').order('name'),q('lessons').order('juz'),allRows('student_portions'),q('student_lessons'),q('devices'),allRows('payments')]);
+  D={students:s.data||[],lessons:l.data||[],pt,sl:sl.data||[],dv:dv.data||[],pay:py};adminView();
 }
 const dvOf=id=>D.dv.find(x=>x.student_id===id)||{};
 function adminView(){
   const pend=D.dv.filter(x=>x.pending_id).length;
   const T=(k,t)=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';editing=null;adminView()">${t}</button>`;
   view(`<div class="top"><h1>Admin · Niumath</h1><button class="g" onclick="logout()">Sign out</button></div>
-  <div class="tabs" style="margin:10px 0">${T('students','Students')}${T('lessons','Lessons')}${T('approvals','Approvals'+(pend?` <span class="badge">${pend}</span>`:''))}</div>
-  <p class="err">${esc(msg)}</p>`+(tab==='students'?studentsTab():tab==='lessons'?lessonsTab():approvalsTab()));
+  <div class="tabs" style="margin:10px 0">${T('students','Students')}${T('lessons','Lessons')}${T('pay','💰 Payments')}${T('approvals','Approvals'+(pend?` <span class="badge">${pend}</span>`:''))}</div>
+  <p class="err">${esc(msg)}</p>`+(tab==='students'?studentsTab():tab==='lessons'?lessonsTab():tab==='pay'?payTab():approvalsTab()));
 }
 function studentsTab(){
   return `<div class="card"><h2>Add student</h2><input id="sn" placeholder="Full name"><input id="su" type="email" placeholder="Student email"><input id="sp" type="tel" placeholder="Phone number (with country code)"><p class="mu">A welcome email with a link to set their own password is sent to this address.</p>
@@ -238,6 +260,7 @@ async function addLesson(){
   row.files=files;
   act(async()=>{const r=await sb.from('lessons').insert(row).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
 }
-$('#ver').textContent='Version 2.1 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+$('#smb').addEventListener('click',e=>{const a=e.target.closest('.ay');if(!a)return;const was=a.classList.contains('on');document.querySelectorAll('.ay.on').forEach(x=>x.classList.remove('on'));if(!was)a.classList.add('on')});
+$('#ver').textContent='Version 2.2 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 doorOpen();boot();
 </script></body></html>
