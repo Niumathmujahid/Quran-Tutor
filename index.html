@@ -49,6 +49,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 .ay{border-radius:8px;padding:2px 4px;cursor:pointer;transition:background .15s;-webkit-box-decoration-break:clone;box-decoration-break:clone}.ay:hover,.ay.on{background:rgba(217,164,65,.38)}
 #bal{display:none;position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:8px;z-index:30;border-radius:14px;padding:5px 12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}#bal.due{background:#d9a441;color:#2b1d00}#bal.ok{background:var(--pr);color:var(--pt)}
 @keyframes pu{50%{opacity:.35}}#dhint{animation:pu 1.4s infinite}#door{cursor:pointer}
+.ov{width:100%;border-collapse:collapse}.ov th{text-align:left;padding:8px;white-space:nowrap;cursor:pointer;border-bottom:2px solid var(--bd)}.ov td{padding:8px;border-top:1px solid var(--bd);vertical-align:top;min-width:110px}.ov .nm{cursor:pointer;font-weight:600}
 </style></head><body><svg class="bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
 <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050f24"/><stop offset=".6" stop-color="#0c3d44"/><stop offset="1" stop-color="#d9a441"/></linearGradient>
 <radialGradient id="gl"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
@@ -125,13 +126,35 @@ function payTab(){
 function addPay(id,kind){const a=+$('#pa'+id).value;if(!(a>0)){msg='Enter an amount.';return adminView()}act(()=>sb.from('payments').insert({student_id:id,kind,amount:a,note:$('#pn'+id).value.trim()}))}
 function chargeAll(){const a=+$('#ba').value;if(!(a>0)){msg='Enter an amount.';return adminView()}if(!confirm('Add '+money(a)+' to every student?'))return;const note=$('#bn').value.trim();act(()=>sb.from('payments').insert(D.students.map(s=>({student_id:s.id,kind:'charge',amount:a,note}))))}
 const delPay=id=>confirm('Delete this entry?')&&act(()=>sb.from('payments').delete().eq('id',id));
+let ovSort='name',ovDir=1,ovQ='';
+const titleOf=o=>o.l.title;
+function ovRow(s){
+  const pt=D.pt.filter(x=>x.student_id===s.id).sort((a,b)=>a.juz-b.juz||a.surah-b.surah),cur=pt.find(x=>!x.completed_at),done=pt.filter(x=>x.completed_at).length;
+  const lk=k=>{const a=D.sl.filter(x=>x.student_id===s.id).map(x=>({x,l:D.lessons.find(l=>l.id===x.lesson_id)})).filter(o=>o.l&&o.l.kind===k).sort((a,b)=>new Date(a.x.assigned_at||0)-new Date(b.x.assigned_at||0));return{cur:a.find(o=>!o.x.completed_at),n:a.length,d:a.filter(o=>o.x.completed_at).length}};
+  return{s,cur,done,tot:pt.length,pct:pt.length?Math.round(done*100/pt.length):0,h:lk('hadith'),d:lk('dua')}}
+function ovCell(s,g){if(!g.n)return '<span class="mu">—</span>';if(!g.cur)return `<span class="pill ok">✔ All done (${g.n})</span>`;
+  return `${esc(g.cur.l.title)} <button class="g" onclick="doneLes('${s.id}','${g.cur.l.id}')">✔ Done</button><br><span class="mu">${g.d}/${g.n} completed</span>`}
+function ovTable(){
+  const rows=D.students.filter(s=>(s.name+' '+(s.email||'')).toLowerCase().includes(ovQ.toLowerCase())).map(ovRow);
+  const key={name:r=>r.s.name.toLowerCase(),juz:r=>r.cur?r.cur.juz:999,surah:r=>r.cur?r.cur.surah:999,pct:r=>r.pct,hadith:r=>r.h.cur?titleOf(r.h.cur).toLowerCase():'~',dua:r=>r.d.cur?titleOf(r.d.cur).toLowerCase():'~'}[ovSort];
+  rows.sort((a,b)=>{const x=key(a),y=key(b);return(typeof x==='string'?x.localeCompare(y):x-y)*ovDir});
+  const th=(k,t)=>`<th onclick="ovSortBy('${k}')">${t}${ovSort===k?(ovDir>0?' ▲':' ▼'):''}</th>`;
+  return `<table class="ov"><tr>${th('name','Student')}${th('juz','Juz')}${th('surah','Surah reciting')}${th('pct','Quran progress')}${th('hadith','Hadith')}${th('dua','Dua')}</tr>`+
+  (rows.map(r=>`<tr><td class="nm" onclick="tab='students';editing='${r.s.id}';adminView()">${esc(r.s.name)}</td>
+  <td>${r.cur?'Juz '+r.cur.juz:r.tot?'<span class="pill ok">✔ All done</span>':'<span class="mu">—</span>'}</td>
+  <td>${r.cur?`${r.cur.surah}. ${SN[r.cur.surah-1]}<br><span class="mu">day ${Math.max(1,Math.ceil((Date.now()-new Date(r.cur.started_at))/DAY))}</span> <button class="g" onclick="setDone('${r.s.id}',${r.cur.juz},${r.cur.surah},true)">✔ Done</button>`:'<span class="mu">—</span>'}</td>
+  <td>${r.tot?`${bar(r.pct,r.pct===100)}<span class="mu">${r.done}/${r.tot} surahs · ${r.pct}%</span>`:'<span class="mu">Not allocated</span>'}</td>
+  <td>${ovCell(r.s,r.h)}</td><td>${ovCell(r.s,r.d)}</td></tr>`).join('')||'<tr><td colspan="6" class="mu">No students found.</td></tr>')+`</table>`}
+function ovSortBy(k){if(ovSort===k)ovDir=-ovDir;else{ovSort=k;ovDir=1}$('#ovt').innerHTML=ovTable()}
+function overviewTab(){return `<div class="card"><h2>Who is on what</h2><p class="mu">Tap a column title to sort. Tap a student name to open their allocation.</p><input placeholder="Search student…" value="${esc(ovQ)}" oninput="ovQ=this.value;$('#ovt').innerHTML=ovTable()"><div id="ovt" style="overflow-x:auto">${ovTable()}</div></div>`}
+const doneLes=(sid,lid)=>act(()=>sb.from('student_lessons').update({completed_at:new Date().toISOString()}).eq('student_id',sid).eq('lesson_id',lid));
 const fileBtns=l=>(l.files||[]).map(f=>`<button class="g" onclick="openFile('${esc(f.path)}')">📎 ${esc(f.name)}</button>`).join('');
 async function openFile(path){const w=window.open('','_blank');const{data,error}=await sb.storage.from('lesson-files').createSignedUrl(path,600);if(error||!data){if(w)w.close();alert('Could not open the file: '+(error?error.message:'no access'));return}if(w)w.location=data.signedUrl;else location.href=data.signedUrl}
 const DOM='@niumath.app',$=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let dev;try{dev=localStorage.getItem('nm_dev');if(!dev){dev=crypto.randomUUID();localStorage.setItem('nm_dev',dev)}}catch(e){dev=crypto.randomUUID()}
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{global:{headers:{'x-device-id':dev}}});
-let me=null,msg='',tab='students',editing=null,D={students:[],lessons:[],juz:[],sl:[],dv:[]},S={lessons:[],juz:[],waiting:false};
+let me=null,msg='',tab='overview',editing=null,D={students:[],lessons:[],juz:[],sl:[],dv:[]},S={lessons:[],juz:[],waiting:false};
 const view=h=>{$('#app').innerHTML=h;$('#bal').style.display='none'};
 async function boot(){
   const{data:{session}}=await sb.auth.getSession();
@@ -195,8 +218,8 @@ function adminView(){
   const pend=D.dv.filter(x=>x.pending_id).length;
   const T=(k,t)=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';editing=null;adminView()">${t}</button>`;
   view(`<div class="top"><h1>Admin · Niumath</h1><button class="g" onclick="logout()">Sign out</button></div>
-  <div class="tabs" style="margin:10px 0">${T('students','Students')}${T('lessons','Lessons')}${T('pay','💰 Payments')}${T('approvals','Approvals'+(pend?` <span class="badge">${pend}</span>`:''))}</div>
-  <p class="err">${esc(msg)}</p>`+(tab==='students'?studentsTab():tab==='lessons'?lessonsTab():tab==='pay'?payTab():approvalsTab()));
+  <div class="tabs" style="margin:10px 0">${T('overview','📊 Overview')}${T('students','Students')}${T('lessons','Lessons')}${T('pay','💰 Payments')}${T('approvals','Approvals'+(pend?` <span class="badge">${pend}</span>`:''))}</div>
+  <p class="err">${esc(msg)}</p>`+(tab==='overview'?overviewTab():tab==='students'?studentsTab():tab==='lessons'?lessonsTab():tab==='pay'?payTab():approvalsTab()));
 }
 function studentsTab(){
   return `<div class="card"><h2>Add student</h2><input id="sn" placeholder="Full name"><input id="su" type="email" placeholder="Student email"><input id="sp" type="tel" placeholder="Phone number (with country code)"><p class="mu">A welcome email with a link to set their own password is sent to this address.</p>
@@ -268,6 +291,6 @@ async function addLesson(){
   act(async()=>{const r=await sb.from('lessons').insert(row).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
 }
 $('#smb').addEventListener('click',e=>{const a=e.target.closest('.ay');if(!a)return;const was=a.classList.contains('on');document.querySelectorAll('.ay.on').forEach(x=>x.classList.remove('on'));if(!was)a.classList.add('on')});
-$('#ver').textContent='Version 2.3 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+$('#ver').textContent='Version 2.4 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 intro();boot();
 </script></body></html>
