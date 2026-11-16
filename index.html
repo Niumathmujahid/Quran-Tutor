@@ -41,6 +41,11 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 .bis,.ahd{text-align:center;font:32px/1.8 'Amiri Quran','Amiri',serif;margin:6px 0}
 .chip{border:0;cursor:pointer;font:inherit;font-size:14px}
 #ver{position:fixed;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:30;background:rgba(0,0,0,.55);color:#f5d98a;font-size:12px;padding:3px 10px;border-radius:12px;pointer-events:none}
+.chip.pend{background:transparent;color:var(--tx);border:1px solid #d9a441}
+.pb{height:9px;border-radius:6px;background:var(--bd);overflow:hidden;margin:6px 0}.pb i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#1d6b4f,#4cb88d);transition:width .6s}.pb i.go{background:linear-gradient(90deg,#d9a441,#f5d98a)}
+.jp{border:1px solid var(--bd);border-left:6px solid #d9a441;border-radius:10px;padding:10px 12px;margin:10px 0}.jp.ok{border-left-color:var(--pr)}
+.pill{border-radius:12px;padding:2px 10px;font-size:13px;display:inline-block}.pill.ok{background:var(--pr);color:var(--pt)}.pill.go{background:#d9a441;color:#2b1d00}
+.ring{width:84px;height:84px;border-radius:50%;background:conic-gradient(var(--pr) calc(var(--p)*1%),var(--bd) 0);display:grid;place-items:center;position:relative}.ring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--card)}.ring b{position:relative}
 </style></head><body><svg class="bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
 <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050f24"/><stop offset=".6" stop-color="#0c3d44"/><stop offset="1" stop-color="#d9a441"/></linearGradient>
 <radialGradient id="gl"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
@@ -85,6 +90,18 @@ async function showSurah(n){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#sm').style.display='none'});
 const KI={quran:'📖 Quran',hadith:'📜 Hadith',dua:'🤲 Dua'};
 const lbl=l=>(!l.kind||l.kind==='quran')?'📖 Juz '+l.juz+(l.surah?' · '+SN[l.surah-1]:''):KI[l.kind];
+const DAY=864e5,dys=r=>Math.max(1,Math.ceil((new Date(r.completed_at)-new Date(r.started_at))/DAY));
+function jstat(rows){const t=rows.length,d=rows.filter(r=>r.completed_at).length,done=t>0&&d===t;
+  const st=t?Math.min(...rows.map(r=>+new Date(r.started_at))):0,en=done?Math.max(...rows.map(r=>+new Date(r.completed_at))):Date.now();
+  return{t,d,done,pct:t?Math.round(d*100/t):0,days:t?Math.max(1,Math.ceil((en-st)/DAY)):0}}
+const bar=(pct,done)=>`<div class="pb"><i class="${done?'':'go'}" style="width:${pct}%"></i></div>`;
+function progress(pt){
+  if(!pt.length)return '<p class="mu">Nothing allocated yet.</p>';
+  const by={};pt.forEach(x=>(by[x.juz]=by[x.juz]||[]).push(x));
+  const js=Object.keys(by).map(Number).sort((a,b)=>a-b),st=js.map(j=>jstat(by[j])),sd=pt.filter(x=>x.completed_at).length,jd=st.filter(x=>x.done).length,pct=Math.round(sd*100/pt.length);
+  return `<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px"><div class="ring" style="--p:${pct}"><b>${pct}%</b></div><div><b>${sd} of ${pt.length} surahs completed</b><br><span class="mu">${jd} of ${js.length} juz completed</span></div></div>`+
+  js.map((j,i)=>{const q=st[i];return `<div class="jp ${q.done?'ok':''}"><div class="top"><b>Juz ${j}</b><span class="pill ${q.done?'ok':'go'}">${q.done?'✔ Completed in '+q.days+' day'+(q.days>1?'s':''):'⏳ In progress · day '+q.days}</span></div>${bar(q.pct,q.done)}<div>${by[j].sort((a,b)=>a.surah-b.surah).map(r=>`<button class="chip ${r.completed_at?'':'pend'}" onclick="showSurah(${r.surah})">${r.completed_at?'✔':'⏳'} Surah ${r.surah} · ${SN[r.surah-1]}${r.completed_at?' · '+dys(r)+'d':''}</button>`).join('')}</div></div>`}).join('')}
+const doneBtn=(id,j,n,mine)=>{const r=mine.find(x=>x.juz===j&&x.surah===n);if(!r)return '';return r.completed_at?`<button class="g" onclick="setDone('${id}',${j},${n},false)">✔ Completed · ${dys(r)}d (undo)</button>`:`<button onclick="setDone('${id}',${j},${n},true)">Mark complete</button>`};
 const fileBtns=l=>(l.files||[]).map(f=>`<button class="g" onclick="openFile('${esc(f.path)}')">📎 ${esc(f.name)}</button>`).join('');
 async function openFile(path){const w=window.open('','_blank');const{data,error}=await sb.storage.from('lesson-files').createSignedUrl(path,600);if(error||!data){if(w)w.close();alert('Could not open the file: '+(error?error.message:'no access'));return}if(w)w.location=data.signedUrl;else location.href=data.signedUrl}
 const DOM='@niumath.app',$=s=>document.querySelector(s);
@@ -128,7 +145,7 @@ async function loadStudent(){
     S.waiting=true;return studentView();
   }
   S.waiting=false;
-  const[l,j]=await Promise.all([sb.from('lessons').select('*').order('juz'),sb.from('student_portions').select('juz,surah')]);
+  const[l,j]=await Promise.all([sb.from('lessons').select('*').order('juz'),sb.from('student_portions').select('juz,surah,started_at,completed_at')]);
   S.lessons=l.data||[];S.pt=j.data||[];studentView();
 }
 function studentView(){
@@ -136,7 +153,7 @@ function studentView(){
   if(S.waiting)return view(head+`<div class="card"><h2>Waiting for approval</h2><p>This device needs approval from the admin. Once approved, tap the button below.</p><button onclick="boot()">Check again</button></div>`);
   const card=l=>`<div class="card"><span class="mu">${lbl(l)}</span>${l.surah?` <button class="g" onclick="showSurah(${l.surah})">📖 Read</button>`:''}<h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${fileBtns(l)}${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open attachment ↗</a></p>`:''}</div>`;
   const sec=k=>{const a=S.lessons.filter(l=>(l.kind||'quran')===k);return a.length?`<h2 style="color:#fff;text-shadow:0 1px 4px #000;margin-top:18px">${KI[k]}</h2>`+a.map(card).join(''):''};
-  view(head+`<div class="card"><b>My study plan</b>${chips(S.pt)||'<p class="mu">Nothing allocated yet.</p>'}</div>`+(sec('quran')+sec('hadith')+sec('dua')||'<div class="card mu">No lessons assigned yet.</div>'));
+  view(head+`<div class="card"><b>My progress</b>${progress(S.pt)}</div>`+(sec('quran')+sec('hadith')+sec('dua')||'<div class="card mu">No lessons assigned yet.</div>'));
 }
 /* ---------- admin ---------- */
 async function loadAdmin(){
@@ -159,14 +176,14 @@ function studentsTab(){
 }
 function assign(s){
   const mine=D.pt.filter(x=>x.student_id===s.id),ml=D.sl.filter(x=>x.student_id===s.id).map(x=>x.lesson_id);
-  const ss=surahsOf(selJ),sel=mine.filter(x=>x.juz===selJ).map(x=>x.surah),all=sel.length===ss.length;
+  const ss=surahsOf(selJ),sel=mine.filter(x=>x.juz===selJ).map(x=>x.surah),all=sel.length===ss.length,js=jstat(mine.filter(x=>x.juz===selJ));
   return `<h2 style="margin-top:12px">Allocate juz &amp; surahs</h2><p class="mu">Pick a juz on the left, then tick its surahs on the right.</p>
-  <button class="g" onclick="allJ('${s.id}',true)">All 30 juz</button><button class="g" onclick="allJ('${s.id}',false)">Clear all</button>
-  <div class="sel" style="margin-top:8px"><div class="jl">${Array.from({length:30},(_,i)=>i+1).map(j=>{const c=mine.filter(x=>x.juz===j).length;return `<button class="${selJ===j?'':'g'}" onclick="selJ=${j};adminView()">Juz ${j}${c?` <span class="badge">${c}</span>`:''}</button>`}).join('')}</div>
-  <div style="border:1px solid var(--bd);border-radius:10px;padding:10px"><b>Juz ${selJ} · surahs</b>
+  <button class="g" onclick="allJ('${s.id}',true)">All 30 juz</button><button class="g" onclick="confirm('Clear all allocations and progress?')&&allJ('${s.id}',false)">Clear all</button>
+  <div class="sel" style="margin-top:8px"><div class="jl">${Array.from({length:30},(_,i)=>i+1).map(j=>{const q=jstat(mine.filter(x=>x.juz===j));return `<button class="${selJ===j?'':'g'}" onclick="selJ=${j};adminView()">Juz ${j}${q.t?(q.done?' ✔':` <span class="badge">${q.d}/${q.t}</span>`):''}${q.t?bar(q.pct,q.done):''}</button>`}).join('')}</div>
+  <div style="border:1px solid var(--bd);border-radius:10px;padding:10px"><b>Juz ${selJ} · surahs</b> ${js.t?`<span class="pill ${js.done?'ok':'go'}">${js.done?'✔ Juz '+selJ+' completed in '+js.days+' day'+(js.days>1?'s':''):'⏳ day '+js.days+' · '+js.d+'/'+js.t+' surahs'}</span>${bar(js.pct,js.done)}<button class="g" onclick="doneJuz('${s.id}',${selJ})">✔ Mark whole juz complete</button>`:''}
   <label style="display:block;margin:8px 0"><input class="ck" type="checkbox" ${all?'checked':''} onchange="setJuz('${s.id}',${selJ},this.checked)"><b>All surahs in Juz ${selJ}</b></label>
-  ${ss.map(n=>`<div class="top" style="border-top:1px solid var(--bd)"><label style="padding:4px 0"><input class="ck" type="checkbox" ${sel.includes(n)?'checked':''} onchange="togSurah('${s.id}',${selJ},${n},this.checked)">Surah ${n} · ${SN[n-1]}</label><button class="g" onclick="showSurah(${n})">📖 Read</button></div>`).join('')}</div></div>
-  <h2 style="margin-top:14px">${esc(s.name)} will see</h2>${chips(mine)||'<p class="mu">Nothing allocated yet.</p>'}
+  ${ss.map(n=>`<div class="top" style="border-top:1px solid var(--bd)"><label style="padding:4px 0"><input class="ck" type="checkbox" ${sel.includes(n)?'checked':''} onchange="togSurah('${s.id}',${selJ},${n},this.checked)">Surah ${n} · ${SN[n-1]}</label>${doneBtn(s.id,selJ,n,mine)}<button class="g" onclick="showSurah(${n})">📖 Read</button></div>`).join('')}</div></div>
+  <h2 style="margin-top:14px">${esc(s.name)} · progress</h2>${progress(mine)}
   <h2 style="margin-top:14px">Extra single lessons</h2>`+(D.lessons.map(l=>`<label style="display:block"><input class="ck" type="checkbox" ${ml.includes(l.id)?'checked':''} onchange="togLes('${s.id}','${l.id}',this.checked)">${lbl(l)} · ${esc(l.title)}</label>`).join('')||'<p class="mu">Create lessons first.</p>');
 }
 function lessonsTab(){
@@ -200,9 +217,11 @@ async function addStudent(){
 }
 async function sendLinkRaw(email){const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});return error?{error}:{}}
 const sendLink=async e=>{const r=await sendLinkRaw(e);msg=r.error?r.error.message:'Password link sent to '+e;adminView()};
-const setJuz=(id,j,on)=>act(async()=>{await sb.from('student_portions').delete().eq('student_id',id).eq('juz',j);if(on)return sb.from('student_portions').insert(surahsOf(j).map(n=>({student_id:id,juz:j,surah:n})))});
+const setJuz=(id,j,on)=>act(()=>on?sb.from('student_portions').upsert(surahsOf(j).map(n=>({student_id:id,juz:j,surah:n})),{onConflict:'student_id,juz,surah',ignoreDuplicates:true}):sb.from('student_portions').delete().eq('student_id',id).eq('juz',j));
+const setDone=(id,j,n,on)=>act(()=>sb.from('student_portions').update({completed_at:on?new Date().toISOString():null}).eq('student_id',id).eq('juz',j).eq('surah',n));
+const doneJuz=(id,j)=>act(()=>sb.from('student_portions').update({completed_at:new Date().toISOString()}).eq('student_id',id).eq('juz',j).is('completed_at',null));
 const togSurah=(id,j,n,on)=>(on&&showSurah(n),act(()=>on?sb.from('student_portions').insert({student_id:id,juz:j,surah:n}):sb.from('student_portions').delete().eq('student_id',id).eq('juz',j).eq('surah',n)));
-const allJ=(id,on)=>act(async()=>{await sb.from('student_portions').delete().eq('student_id',id);if(on)return sb.from('student_portions').insert(Array.from({length:30},(_,i)=>i+1).flatMap(j=>surahsOf(j).map(n=>({student_id:id,juz:j,surah:n}))))});
+const allJ=(id,on)=>act(()=>on?sb.from('student_portions').upsert(Array.from({length:30},(_,i)=>i+1).flatMap(j=>surahsOf(j).map(n=>({student_id:id,juz:j,surah:n}))),{onConflict:'student_id,juz,surah',ignoreDuplicates:true}):sb.from('student_portions').delete().eq('student_id',id));
 const togLes=(id,l,on)=>act(()=>on?sb.from('student_lessons').insert({student_id:id,lesson_id:l}):sb.from('student_lessons').delete().eq('student_id',id).eq('lesson_id',l));
 const delStudent=id=>confirm('Delete this student?')&&act(()=>sb.from('profiles').delete().eq('id',id));
 const delLesson=id=>confirm('Delete this lesson?')&&act(async()=>{const l=D.lessons.find(x=>x.id===id),ps=((l&&l.files)||[]).map(f=>f.path);if(ps.length)await sb.storage.from('lesson-files').remove(ps);return sb.from('lessons').delete().eq('id',id)});
@@ -219,6 +238,6 @@ async function addLesson(){
   row.files=files;
   act(async()=>{const r=await sb.from('lessons').insert(row).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
 }
-$('#ver').textContent='Version 2.0 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+$('#ver').textContent='Version 2.1 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 doorOpen();boot();
 </script></body></html>
