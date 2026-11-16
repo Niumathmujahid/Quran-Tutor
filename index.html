@@ -57,7 +57,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 </svg>
 <div class="photo sc"></div>
 <div id="sm" onclick="if(event.target===this)this.style.display='none'"><div class="smc"><div class="top"><h2 id="smt"></h2><button onclick="$('#sm').style.display='none'">Close ✕</button></div><div id="smb"></div></div></div>
-<div id="ver">Version 1.8 · 15 Nov 2026</div>
+<div id="ver"></div>
 <div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div></div></div>
 <div class="w" id="app">Loading…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
@@ -210,5 +210,6 @@ function addLesson(){
   if(!ids.length){msg='Choose at least one student.';return adminView()}
   act(async()=>{const r=await sb.from('lessons').insert({kind:k,title:t,juz:k==='quran'?+$('#lj').value:null,surah:k==='quran'&&$('#ls').value?+$('#ls').value:null,body:$('#lb').value,link:$('#ll').value.trim()}).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
 }
+$('#ver').textContent='Version 1.9 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 doorOpen();boot();
 </script></body></html>
