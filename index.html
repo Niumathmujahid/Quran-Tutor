@@ -85,6 +85,8 @@ async function showSurah(n){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#sm').style.display='none'});
 const KI={quran:'📖 Quran',hadith:'📜 Hadith',dua:'🤲 Dua'};
 const lbl=l=>(!l.kind||l.kind==='quran')?'📖 Juz '+l.juz+(l.surah?' · '+SN[l.surah-1]:''):KI[l.kind];
+const fileBtns=l=>(l.files||[]).map(f=>`<button class="g" onclick="openFile('${esc(f.path)}')">📎 ${esc(f.name)}</button>`).join('');
+async function openFile(path){const w=window.open('','_blank');const{data,error}=await sb.storage.from('lesson-files').createSignedUrl(path,600);if(error||!data){if(w)w.close();alert('Could not open the file: '+(error?error.message:'no access'));return}if(w)w.location=data.signedUrl;else location.href=data.signedUrl}
 const DOM='@niumath.app',$=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let dev;try{dev=localStorage.getItem('nm_dev');if(!dev){dev=crypto.randomUUID();localStorage.setItem('nm_dev',dev)}}catch(e){dev=crypto.randomUUID()}
@@ -132,7 +134,7 @@ async function loadStudent(){
 function studentView(){
   const head=`<div class="top"><h1>Salaam, ${esc(me.name)}</h1><button class="g" onclick="logout()">Sign out</button></div>`;
   if(S.waiting)return view(head+`<div class="card"><h2>Waiting for approval</h2><p>This device needs approval from the admin. Once approved, tap the button below.</p><button onclick="boot()">Check again</button></div>`);
-  const card=l=>`<div class="card"><span class="mu">${lbl(l)}</span>${l.surah?` <button class="g" onclick="showSurah(${l.surah})">📖 Read</button>`:''}<h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open attachment ↗</a></p>`:''}</div>`;
+  const card=l=>`<div class="card"><span class="mu">${lbl(l)}</span>${l.surah?` <button class="g" onclick="showSurah(${l.surah})">📖 Read</button>`:''}<h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${fileBtns(l)}${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open attachment ↗</a></p>`:''}</div>`;
   const sec=k=>{const a=S.lessons.filter(l=>(l.kind||'quran')===k);return a.length?`<h2 style="color:#fff;text-shadow:0 1px 4px #000;margin-top:18px">${KI[k]}</h2>`+a.map(card).join(''):''};
   view(head+`<div class="card"><b>My study plan</b>${chips(S.pt)||'<p class="mu">Nothing allocated yet.</p>'}</div>`+(sec('quran')+sec('hadith')+sec('dua')||'<div class="card mu">No lessons assigned yet.</div>'));
 }
@@ -174,13 +176,13 @@ function lessonsTab(){
   <label>Title</label><input id="lt" placeholder="Lesson title">
   <div id="fq"><label>Juz &amp; surah (Arabic text opens when you pick a surah)</label><select id="lj" onchange="fillSurah()">${Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('')}</select>
   <select id="ls" onchange="if(this.value)showSurah(+this.value)"><option value="">Whole juz (any surah)</option>${surahsOf(1).map(n=>`<option value="${n}">${n}. ${SN[n-1]}</option>`).join('')}</select></div>
-  <label id="fal">Attachment link (optional)</label><input id="ll" placeholder="https://… (Drive, PDF, audio, video)">
+  <label id="fal">Attachment link (optional)</label><input id="ll" placeholder="https://… (Drive, YouTube, audio, video)"><label>Attach files (PDF or images, up to 10 MB each)</label><input id="lf" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*">
   <label>Notes / instructions</label><textarea id="lb" rows="3"></textarea>
   <label>Assign to students</label>${D.students.map(s=>`<label style="display:block"><input class="ck as" type="checkbox" value="${s.id}">${esc(s.name)}</label>`).join('')||'<p class="mu">Add students first.</p>'}
   <button class="g" onclick="document.querySelectorAll('.as').forEach(x=>x.checked=true)">Select all</button><button onclick="addLesson()">Save lesson</button></div>`+
-  (D.lessons.map(l=>`<div class="card top"><div><span class="mu">${lbl(l)}</span><br><b>${esc(l.title)}</b><br><span class="mu">For: ${esc(who(l))}</span></div><button class="d" onclick="delLesson('${l.id}')">Delete</button></div>`).join('')||'<p class="mu">No lessons yet.</p>');
+  (D.lessons.map(l=>`<div class="card top"><div><span class="mu">${lbl(l)}</span><br><b>${esc(l.title)}</b><br><span class="mu">For: ${esc(who(l))}</span><br>${fileBtns(l)}</div><button class="d" onclick="delLesson('${l.id}')">Delete</button></div>`).join('')||'<p class="mu">No lessons yet.</p>');
 }
-function setKind(){const q=$('#lk').value==='quran';$('#fq').style.display=q?'':'none';$('#fal').textContent=q?'Attachment link (optional)':'Attach the '+$('#lk').value+' here (paste a link: Drive, PDF, audio, video)'}
+function setKind(){const q=$('#lk').value==='quran';$('#fq').style.display=q?'':'none';$('#fal').textContent=q?'Attachment link (optional)':'Link for the '+$('#lk').value+' (optional)'}
 function fillSurah(){$('#ls').innerHTML='<option value="">Whole juz (any surah)</option>'+surahsOf(+$('#lj').value).map(n=>`<option value="${n}">${n}. ${SN[n-1]}</option>`).join('')}
 function approvalsTab(){
   return D.dv.filter(x=>x.pending_id).map(x=>{const s=D.students.find(y=>y.id===x.student_id)||{};return `<div class="card top"><div><b>${esc(s.name)}</b><br><span class="mu">New device wants access · ${new Date(x.pending_at).toLocaleString()}${x.device_id?' · replaces current device':''}</span></div>
@@ -203,13 +205,20 @@ const togSurah=(id,j,n,on)=>(on&&showSurah(n),act(()=>on?sb.from('student_portio
 const allJ=(id,on)=>act(async()=>{await sb.from('student_portions').delete().eq('student_id',id);if(on)return sb.from('student_portions').insert(Array.from({length:30},(_,i)=>i+1).flatMap(j=>surahsOf(j).map(n=>({student_id:id,juz:j,surah:n}))))});
 const togLes=(id,l,on)=>act(()=>on?sb.from('student_lessons').insert({student_id:id,lesson_id:l}):sb.from('student_lessons').delete().eq('student_id',id).eq('lesson_id',l));
 const delStudent=id=>confirm('Delete this student?')&&act(()=>sb.from('profiles').delete().eq('id',id));
-const delLesson=id=>confirm('Delete this lesson?')&&act(()=>sb.from('lessons').delete().eq('id',id));
-function addLesson(){
-  const t=$('#lt').value.trim(),k=$('#lk').value,ids=[...document.querySelectorAll('.as:checked')].map(x=>x.value);
+const delLesson=id=>confirm('Delete this lesson?')&&act(async()=>{const l=D.lessons.find(x=>x.id===id),ps=((l&&l.files)||[]).map(f=>f.path);if(ps.length)await sb.storage.from('lesson-files').remove(ps);return sb.from('lessons').delete().eq('id',id)});
+async function addLesson(){
+  const t=$('#lt').value.trim(),k=$('#lk').value,ids=[...document.querySelectorAll('.as:checked')].map(x=>x.value),fl=[...$('#lf').files];
+  const row={kind:k,title:t,juz:k==='quran'?+$('#lj').value:null,surah:k==='quran'&&$('#ls').value?+$('#ls').value:null,body:$('#lb').value,link:$('#ll').value.trim()};
   if(!t){msg='Title required.';return adminView()}
   if(!ids.length){msg='Choose at least one student.';return adminView()}
-  act(async()=>{const r=await sb.from('lessons').insert({kind:k,title:t,juz:k==='quran'?+$('#lj').value:null,surah:k==='quran'&&$('#ls').value?+$('#ls').value:null,body:$('#lb').value,link:$('#ll').value.trim()}).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
+  if(fl.some(f=>f.size>10485760)){msg='Each file must be 10 MB or smaller.';return adminView()}
+  msg='Saving… please wait.';adminView();
+  const files=[];
+  for(const f of fl){const path=crypto.randomUUID()+'-'+f.name.replace(/[^\w.\-]+/g,'_');const u=await sb.storage.from('lesson-files').upload(path,f,{contentType:f.type||'application/octet-stream'});
+    if(u.error){msg='Upload failed: '+u.error.message;return adminView()}files.push({path,name:f.name})}
+  row.files=files;
+  act(async()=>{const r=await sb.from('lessons').insert(row).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
 }
-$('#ver').textContent='Version 1.9 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+$('#ver').textContent='Version 2.0 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 doorOpen();boot();
 </script></body></html>
