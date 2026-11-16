@@ -69,6 +69,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 <div id="ver"></div>
 <div id="bal" onclick="document.getElementById('fees')&&document.getElementById('fees').scrollIntoView({behavior:'smooth'})"></div>
 <div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div><div id="dhint" style="display:none;margin-top:22px;font-size:20px">🔊 Tap to enter</div></div></div>
+<script>try{if(sessionStorage.getItem('nm_intro'))document.getElementById('door').style.display='none'}catch(e){}</script>
 <div class="w" id="app">Loading…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -176,11 +177,19 @@ async function setPass(){const a=$('#np').value;msg='';if(a.length<6)msg='Use 6 
 async function forgot(){const u=($('#u').value||'').trim().toLowerCase();if(!u.includes('@')){msg='Type your email address in the first box, then tap Forgot password.';return view(loginView())}
   const{error}=await sb.auth.resetPasswordForEmail(u,{redirectTo:location.origin+location.pathname});msg=error?error.message:'If this email is registered, a link was sent. Check your inbox and spam folder.';view(loginView())}
 const BIS=new Audio('https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3');BIS.preload='auto';let opened=false;
-function openDoor(){if(opened)return;opened=true;const d=$('#door');d.className='go';setTimeout(()=>d.style.display='none',2000)}
+function openDoor(){if(opened)return;opened=true;try{sessionStorage.setItem('nm_intro','1')}catch(e){}const d=$('#door');d.className='go';setTimeout(()=>d.style.display='none',2000)}
 function intro(){
-  const d=$('#door'),h=$('#dhint'),after=()=>setTimeout(openDoor,500),guard=()=>setTimeout(openDoor,12000);
-  BIS.onended=after;BIS.onerror=()=>setTimeout(openDoor,1200);
-  BIS.play().then(guard).catch(()=>{h.style.display='block';d.onclick=()=>{d.onclick=null;h.style.display='none';guard();BIS.play().catch(()=>setTimeout(openDoor,800))}});
+  try{if(sessionStorage.getItem('nm_intro')){opened=true;return}}catch(e){}
+  let started=false;
+  BIS.onplaying=()=>{started=true;setTimeout(openDoor,12000)};
+  BIS.onended=()=>setTimeout(openDoor,500);
+  BIS.onerror=()=>setTimeout(openDoor,800);
+  setTimeout(()=>{if(!started)openDoor()},4000);
+  BIS.play().catch(()=>{
+    setTimeout(openDoor,1200);
+    const go=()=>{['click','touchend','keydown'].forEach(e=>removeEventListener(e,go));BIS.play().catch(()=>{})};
+    ['click','touchend','keydown'].forEach(e=>addEventListener(e,go));
+  });
 }
 async function login(){
   const u=$('#u').value.trim().toLowerCase(),p=$('#p').value;msg='';
@@ -291,6 +300,6 @@ async function addLesson(){
   act(async()=>{const r=await sb.from('lessons').insert(row).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
 }
 $('#smb').addEventListener('click',e=>{const a=e.target.closest('.ay');if(!a)return;const was=a.classList.contains('on');document.querySelectorAll('.ay.on').forEach(x=>x.classList.remove('on'));if(!was)a.classList.add('on')});
-$('#ver').textContent='Version 2.4 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+$('#ver').textContent='Version 2.6 · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 intro();boot();
 </script></body></html>
