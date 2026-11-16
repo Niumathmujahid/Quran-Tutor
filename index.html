@@ -57,7 +57,7 @@ button.g{background:transparent;color:var(--pr);border:1px solid var(--pr)}butto
 </svg>
 <div class="photo sc"></div>
 <div id="sm" onclick="if(event.target===this)this.style.display='none'"><div class="smc"><div class="top"><h2 id="smt"></h2><button onclick="$('#sm').style.display='none'">Close ✕</button></div><div id="smb"></div></div></div>
-<div id="ver">Version 1.7 · 15 Nov 2026</div>
+<div id="ver">Version 1.8 · 15 Nov 2026</div>
 <div id="door"><div class="dp l"></div><div class="dp r"></div><div class="dt"><div class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div>Ahlul Quran Classes</div></div></div>
 <div class="w" id="app">Loading…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
@@ -83,6 +83,8 @@ async function showSurah(n){
   }catch(e){$('#smb').innerHTML='<p class="err">Could not load the surah text. Check your internet connection and try again.</p><p class="mu">Details: '+esc(e&&e.message?e.message:'no data received from api.alquran.cloud')+'</p><button onclick="showSurah('+n+')">Try again</button>'}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#sm').style.display='none'});
+const KI={quran:'📖 Quran',hadith:'📜 Hadith',dua:'🤲 Dua'};
+const lbl=l=>(!l.kind||l.kind==='quran')?'📖 Juz '+l.juz+(l.surah?' · '+SN[l.surah-1]:''):KI[l.kind];
 const DOM='@niumath.app',$=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let dev;try{dev=localStorage.getItem('nm_dev');if(!dev){dev=crypto.randomUUID();localStorage.setItem('nm_dev',dev)}}catch(e){dev=crypto.randomUUID()}
@@ -91,31 +93,27 @@ let me=null,msg='',tab='students',editing=null,D={students:[],lessons:[],juz:[],
 const view=h=>$('#app').innerHTML=h;
 async function boot(){
   const{data:{session}}=await sb.auth.getSession();
-  if(!session){me=null;return view(loginView())}
+  if(REC&&session)return view(passView());if(!session){me=null;return view(loginView())}
   const{data:p}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
   if(!p){await sb.auth.signOut();msg='Account not found.';return view(loginView())}
   me=p;p.role==='admin'?await loadAdmin():await loadStudent();
 }
 let reg=false;
-function loginView(){return `<div class="card"><p class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p><h1>🕌 Ahlul Quran Classes</h1><p class="mu">${reg?'Create your student account.':'Sign in with your username and password.'}</p>
-${reg?'<label>Full name</label><input id="rn" autocomplete="name">':''}<label>Username</label><input id="u" autocomplete="username"><label>Password</label><input id="p" type="password" autocomplete="${reg?'new-password':'current-password'}">
-${reg?'<label>Confirm password</label><input id="p2" type="password">':''}<button onclick="${reg?'register()':'login()'}">${reg?'Register':'Sign in'}</button> <button class="g" onclick="reg=!reg;msg='';view(loginView())">${reg?'I already have an account':'New student? Register'}</button><p class="err">${esc(msg)}</p></div>`}
+function loginView(){return `<div class="card"><p class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p><h1>🕌 Ahlul Quran Classes</h1><p class="mu">Sign in with your email (or username) and password.</p>
+<label>Email or username</label><input id="u" autocomplete="username"><label>Password</label><input id="p" type="password" autocomplete="current-password">
+<button onclick="login()">Sign in</button> <button class="g" onclick="forgot()">Forgot password?</button><p class="err">${esc(msg)}</p></div>`}
+let REC=location.hash.includes('type=recovery');
+sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){REC=true;view(passView())}});
+function passView(){return `<div class="card"><p class="ar" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p><h1>Set your password</h1><p class="mu">Welcome to Ahlul Quran Classes. Choose a password for your account.</p>
+<label>New password</label><input id="np" type="password" autocomplete="new-password"><label>Confirm password</label><input id="np2" type="password"><button onclick="setPass()">Save password</button><p class="err">${esc(msg)}</p></div>`}
+async function setPass(){const a=$('#np').value;msg='';if(a.length<6)msg='Use 6 or more characters.';else if(a!==$('#np2').value)msg='Passwords do not match.';if(msg)return view(passView());
+  const{error}=await sb.auth.updateUser({password:a});if(error){msg=error.message;return view(passView())}REC=false;history.replaceState(null,'',location.pathname);doorOpen();boot()}
+async function forgot(){const u=($('#u').value||'').trim().toLowerCase();if(!u.includes('@')){msg='Type your email address in the first box, then tap Forgot password.';return view(loginView())}
+  const{error}=await sb.auth.resetPasswordForEmail(u,{redirectTo:location.origin+location.pathname});msg=error?error.message:'If this email is registered, a link was sent. Check your inbox and spam folder.';view(loginView())}
 function doorOpen(){const d=$('#door');d.style.display='none';d.className='';void d.offsetWidth;d.style.display='flex';setTimeout(()=>d.className='go',900);setTimeout(()=>d.style.display='none',2900)}
-async function register(){
-  const name=$('#rn').value.trim(),u=$('#u').value.trim().toLowerCase(),p=$('#p').value;msg='';
-  if(!name||!/^[a-z0-9_.]{3,}$/.test(u))msg='Enter your name and a username (3+ letters or numbers).';
-  else if(p.length<6)msg='Password must be 6+ characters.';
-  else if(p!==$('#p2').value)msg='Passwords do not match.';
-  if(msg)return view(loginView());
-  const{data,error}=await sb.auth.signUp({email:u+DOM,password:p});
-  if(error||!data.user||!data.session){msg=error&&/registered/i.test(error.message)?'Username already taken.':(error?error.message:'Could not register.');return view(loginView())}
-  const r=await sb.from('profiles').insert({id:data.user.id,username:u,name,role:'student'});
-  if(r.error){await sb.auth.signOut();msg='Registration failed: '+r.error.message;return view(loginView())}
-  reg=false;doorOpen();boot();
-}
 async function login(){
   const u=$('#u').value.trim().toLowerCase(),p=$('#p').value;msg='';
-  const{error}=await sb.auth.signInWithPassword({email:u+DOM,password:p});
+  const{error}=await sb.auth.signInWithPassword({email:u.includes('@')?u:u+DOM,password:p});
   if(error)msg='Wrong username or password.';
   if(msg)view(loginView());else{doorOpen();boot()}
 }
@@ -133,8 +131,10 @@ async function loadStudent(){
 }
 function studentView(){
   const head=`<div class="top"><h1>Salaam, ${esc(me.name)}</h1><button class="g" onclick="logout()">Sign out</button></div>`;
-  if(S.waiting)return view(head+`<div class="card"><h2>Waiting for approval</h2><p>Registration received. The Niumath admin must approve this device and assign your juz. Once done, tap the button below.</p><button onclick="boot()">Check again</button></div>`);
-  view(head+`<div class="card"><b>My allocation</b>${chips(S.pt)||'<p class="mu">Nothing allocated yet.</p>'}</div>`+(S.lessons.map(l=>`<div class="card"><span class="mu">Juz ${l.juz}${l.surah?' · '+SN[l.surah-1]:''}</span>${l.surah?` <button class="g" onclick="showSurah(${l.surah})">📖 Read</button>`:''}<h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open lesson link ↗</a></p>`:''}</div>`).join('')||'<div class="card mu">No lessons assigned yet.</div>'));
+  if(S.waiting)return view(head+`<div class="card"><h2>Waiting for approval</h2><p>This device needs approval from the admin. Once approved, tap the button below.</p><button onclick="boot()">Check again</button></div>`);
+  const card=l=>`<div class="card"><span class="mu">${lbl(l)}</span>${l.surah?` <button class="g" onclick="showSurah(${l.surah})">📖 Read</button>`:''}<h2>${esc(l.title)}</h2><div style="white-space:pre-wrap">${esc(l.body)}</div>${/^https?:\/\//.test(l.link||'')?`<p><a href="${esc(l.link)}" target="_blank" rel="noopener">Open attachment ↗</a></p>`:''}</div>`;
+  const sec=k=>{const a=S.lessons.filter(l=>(l.kind||'quran')===k);return a.length?`<h2 style="color:#fff;text-shadow:0 1px 4px #000;margin-top:18px">${KI[k]}</h2>`+a.map(card).join(''):''};
+  view(head+`<div class="card"><b>My study plan</b>${chips(S.pt)||'<p class="mu">Nothing allocated yet.</p>'}</div>`+(sec('quran')+sec('hadith')+sec('dua')||'<div class="card mu">No lessons assigned yet.</div>'));
 }
 /* ---------- admin ---------- */
 async function loadAdmin(){
@@ -151,9 +151,9 @@ function adminView(){
   <p class="err">${esc(msg)}</p>`+(tab==='students'?studentsTab():tab==='lessons'?lessonsTab():approvalsTab()));
 }
 function studentsTab(){
-  return `<div class="card"><h2>Add student</h2><input id="sn" placeholder="Full name"><input id="su" placeholder="Username (letters/numbers)"><input id="sp" placeholder="Password (6+ characters)">
-  <button onclick="addStudent()">Add student</button></div>`+(D.students.map(s=>`<div class="card"><div class="top"><div><b>${esc(s.name)}</b> <span class="mu">@${esc(s.username)} · ${new Set(D.pt.filter(x=>x.student_id===s.id).map(x=>x.juz)).size} juz · ${dvOf(s.id).device_id?'device linked':'no device'}</span></div>
-  <div><button class="g" onclick="editing=${editing===s.id?'null':`'${s.id}'`};adminView()">${editing===s.id?'Close':'Allocate juz & surahs'}</button><button class="g" onclick="act(()=>sb.from('devices').update({device_id:null,pending_id:null}).eq('student_id','${s.id}'))">Reset device</button><button class="d" onclick="delStudent('${s.id}')">Delete</button></div></div>${editing===s.id?assign(s):''}</div>`).join('')||'<p class="mu">No students yet.</p>');
+  return `<div class="card"><h2>Add student</h2><input id="sn" placeholder="Full name"><input id="su" type="email" placeholder="Student email"><input id="sp" type="tel" placeholder="Phone number (with country code)"><p class="mu">A welcome email with a link to set their own password is sent to this address.</p>
+  <button onclick="addStudent()">Add student &amp; send invite</button></div>`+(D.students.map(s=>`<div class="card"><div class="top"><div><b>${esc(s.name)}</b> <span class="mu">${esc(s.email||s.username)}${s.phone?' · '+esc(s.phone):''} · ${new Set(D.pt.filter(x=>x.student_id===s.id).map(x=>x.juz)).size} juz · ${dvOf(s.id).device_id?'device linked':'no device'}</span></div>
+  <div><button class="g" onclick="editing=${editing===s.id?'null':`'${s.id}'`};adminView()">${editing===s.id?'Close':'Allocate juz & surahs'}</button>${s.email?`<button class="g" onclick="sendLink('${esc(s.email)}')">Send password link</button>`:''}<button class="g" onclick="act(()=>sb.from('devices').update({device_id:null,pending_id:null}).eq('student_id','${s.id}'))">Reset device</button><button class="d" onclick="delStudent('${s.id}')">Delete</button></div></div>${editing===s.id?assign(s):''}</div>`).join('')||'<p class="mu">No students yet.</p>');
 }
 function assign(s){
   const mine=D.pt.filter(x=>x.student_id===s.id),ml=D.sl.filter(x=>x.student_id===s.id).map(x=>x.lesson_id);
@@ -165,14 +165,22 @@ function assign(s){
   <label style="display:block;margin:8px 0"><input class="ck" type="checkbox" ${all?'checked':''} onchange="setJuz('${s.id}',${selJ},this.checked)"><b>All surahs in Juz ${selJ}</b></label>
   ${ss.map(n=>`<div class="top" style="border-top:1px solid var(--bd)"><label style="padding:4px 0"><input class="ck" type="checkbox" ${sel.includes(n)?'checked':''} onchange="togSurah('${s.id}',${selJ},${n},this.checked)">Surah ${n} · ${SN[n-1]}</label><button class="g" onclick="showSurah(${n})">📖 Read</button></div>`).join('')}</div></div>
   <h2 style="margin-top:14px">${esc(s.name)} will see</h2>${chips(mine)||'<p class="mu">Nothing allocated yet.</p>'}
-  <h2 style="margin-top:14px">Extra single lessons</h2>`+(D.lessons.map(l=>`<label style="display:block"><input class="ck" type="checkbox" ${ml.includes(l.id)?'checked':''} onchange="togLes('${s.id}','${l.id}',this.checked)">Juz ${l.juz}${l.surah?' · '+SN[l.surah-1]:''} · ${esc(l.title)}</label>`).join('')||'<p class="mu">Create lessons first.</p>');
+  <h2 style="margin-top:14px">Extra single lessons</h2>`+(D.lessons.map(l=>`<label style="display:block"><input class="ck" type="checkbox" ${ml.includes(l.id)?'checked':''} onchange="togLes('${s.id}','${l.id}',this.checked)">${lbl(l)} · ${esc(l.title)}</label>`).join('')||'<p class="mu">Create lessons first.</p>');
 }
 function lessonsTab(){
-  return `<div class="card"><h2>Create lesson</h2><input id="lt" placeholder="Lesson title"><select id="lj" onchange="fillSurah()">${Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('')}</select>
-  <select id="ls" onchange="if(this.value)showSurah(+this.value)"><option value="">Whole juz (any surah)</option>${surahsOf(1).map(n=>`<option value="${n}">${n}. ${SN[n-1]}</option>`).join('')}</select>
-  <textarea id="lb" rows="4" placeholder="Lesson notes / instructions"></textarea><input id="ll" placeholder="Video or file link (optional, https://…)"><button onclick="addLesson()">Save lesson</button></div>`+
-  (D.lessons.map(l=>`<div class="card top"><div><span class="mu">Juz ${l.juz}${l.surah?' · '+SN[l.surah-1]:''}</span><br><b>${esc(l.title)}</b></div><button class="d" onclick="delLesson('${l.id}')">Delete</button></div>`).join('')||'<p class="mu">No lessons yet.</p>');
+  const who=l=>D.sl.filter(x=>x.lesson_id===l.id).map(x=>(D.students.find(y=>y.id===x.student_id)||{}).name).filter(Boolean).join(', ')||'nobody yet';
+  return `<div class="card"><h2>Create lesson</h2>
+  <label>Lesson type</label><select id="lk" onchange="setKind()"><option value="quran">📖 Quran</option><option value="hadith">📜 Hadith</option><option value="dua">🤲 Dua</option></select>
+  <label>Title</label><input id="lt" placeholder="Lesson title">
+  <div id="fq"><label>Juz &amp; surah (Arabic text opens when you pick a surah)</label><select id="lj" onchange="fillSurah()">${Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('')}</select>
+  <select id="ls" onchange="if(this.value)showSurah(+this.value)"><option value="">Whole juz (any surah)</option>${surahsOf(1).map(n=>`<option value="${n}">${n}. ${SN[n-1]}</option>`).join('')}</select></div>
+  <label id="fal">Attachment link (optional)</label><input id="ll" placeholder="https://… (Drive, PDF, audio, video)">
+  <label>Notes / instructions</label><textarea id="lb" rows="3"></textarea>
+  <label>Assign to students</label>${D.students.map(s=>`<label style="display:block"><input class="ck as" type="checkbox" value="${s.id}">${esc(s.name)}</label>`).join('')||'<p class="mu">Add students first.</p>'}
+  <button class="g" onclick="document.querySelectorAll('.as').forEach(x=>x.checked=true)">Select all</button><button onclick="addLesson()">Save lesson</button></div>`+
+  (D.lessons.map(l=>`<div class="card top"><div><span class="mu">${lbl(l)}</span><br><b>${esc(l.title)}</b><br><span class="mu">For: ${esc(who(l))}</span></div><button class="d" onclick="delLesson('${l.id}')">Delete</button></div>`).join('')||'<p class="mu">No lessons yet.</p>');
 }
+function setKind(){const q=$('#lk').value==='quran';$('#fq').style.display=q?'':'none';$('#fal').textContent=q?'Attachment link (optional)':'Attach the '+$('#lk').value+' here (paste a link: Drive, PDF, audio, video)'}
 function fillSurah(){$('#ls').innerHTML='<option value="">Whole juz (any surah)</option>'+surahsOf(+$('#lj').value).map(n=>`<option value="${n}">${n}. ${SN[n-1]}</option>`).join('')}
 function approvalsTab(){
   return D.dv.filter(x=>x.pending_id).map(x=>{const s=D.students.find(y=>y.id===x.student_id)||{};return `<div class="card top"><div><b>${esc(s.name)}</b><br><span class="mu">New device wants access · ${new Date(x.pending_at).toLocaleString()}${x.device_id?' · replaces current device':''}</span></div>
@@ -180,20 +188,27 @@ function approvalsTab(){
 }
 async function act(fn){const y=scrollY,r=await fn();msg=r&&r.error?r.error.message:'';await loadAdmin();scrollTo(0,y)}
 async function addStudent(){
-  const name=$('#sn').value.trim(),u=$('#su').value.trim().toLowerCase(),p=$('#sp').value;
-  if(!name||!/^[a-z0-9_.]{3,}$/.test(u)||p.length<6){msg='Fill all fields: username 3+ letters/numbers, password 6+.';return adminView()}
+  const name=$('#sn').value.trim(),email=$('#su').value.trim().toLowerCase(),phone=$('#sp').value.trim();
+  if(!name||!/^\S+@\S+\.\S+$/.test(email)){msg='Enter the student name and a valid email.';return adminView()}
   const tmp=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,storageKey:'tmp'}});
-  const{data,error}=await tmp.auth.signUp({email:u+DOM,password:p});
-  if(error||!data.user){msg=error?error.message:'Could not create user.';return adminView()}
-  await act(async()=>{const r=await sb.from('profiles').insert({id:data.user.id,username:u,name,role:'student'});if(r.error)return r;return sb.from('devices').insert({student_id:data.user.id})});
+  const{data,error}=await tmp.auth.signUp({email,password:crypto.randomUUID()+'Aa1!'});
+  if(error||!data.user){msg=error&&/registered/i.test(error.message)?'This email is already registered.':(error?error.message:'Could not create student.');return adminView()}
+  await act(async()=>{const r=await sb.from('profiles').insert({id:data.user.id,username:email,name,role:'student',email,phone});if(r.error)return r;await sb.from('devices').insert({student_id:data.user.id});return sendLinkRaw(email)});
+  if(!msg){msg='Student added. Invite sent to '+email;adminView()}
 }
+async function sendLinkRaw(email){const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});return error?{error}:{}}
+const sendLink=async e=>{const r=await sendLinkRaw(e);msg=r.error?r.error.message:'Password link sent to '+e;adminView()};
 const setJuz=(id,j,on)=>act(async()=>{await sb.from('student_portions').delete().eq('student_id',id).eq('juz',j);if(on)return sb.from('student_portions').insert(surahsOf(j).map(n=>({student_id:id,juz:j,surah:n})))});
 const togSurah=(id,j,n,on)=>(on&&showSurah(n),act(()=>on?sb.from('student_portions').insert({student_id:id,juz:j,surah:n}):sb.from('student_portions').delete().eq('student_id',id).eq('juz',j).eq('surah',n)));
 const allJ=(id,on)=>act(async()=>{await sb.from('student_portions').delete().eq('student_id',id);if(on)return sb.from('student_portions').insert(Array.from({length:30},(_,i)=>i+1).flatMap(j=>surahsOf(j).map(n=>({student_id:id,juz:j,surah:n}))))});
 const togLes=(id,l,on)=>act(()=>on?sb.from('student_lessons').insert({student_id:id,lesson_id:l}):sb.from('student_lessons').delete().eq('student_id',id).eq('lesson_id',l));
 const delStudent=id=>confirm('Delete this student?')&&act(()=>sb.from('profiles').delete().eq('id',id));
 const delLesson=id=>confirm('Delete this lesson?')&&act(()=>sb.from('lessons').delete().eq('id',id));
-function addLesson(){const t=$('#lt').value.trim();if(!t){msg='Title required.';return adminView()}
-  act(()=>sb.from('lessons').insert({title:t,juz:+$('#lj').value,surah:$('#ls').value?+$('#ls').value:null,body:$('#lb').value,link:$('#ll').value.trim()}))}
+function addLesson(){
+  const t=$('#lt').value.trim(),k=$('#lk').value,ids=[...document.querySelectorAll('.as:checked')].map(x=>x.value);
+  if(!t){msg='Title required.';return adminView()}
+  if(!ids.length){msg='Choose at least one student.';return adminView()}
+  act(async()=>{const r=await sb.from('lessons').insert({kind:k,title:t,juz:k==='quran'?+$('#lj').value:null,surah:k==='quran'&&$('#ls').value?+$('#ls').value:null,body:$('#lb').value,link:$('#ll').value.trim()}).select().single();if(r.error)return r;return sb.from('student_lessons').insert(ids.map(id=>({student_id:id,lesson_id:r.data.id})))})
+}
 doorOpen();boot();
 </script></body></html>
